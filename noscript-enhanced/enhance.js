@@ -168,11 +168,13 @@
     s1Inner.style.transform = 'translateY(' + (1 - tOp) * 40 + 'px)';
 
     if (scrolled > geo.heroRange * 0.8) mountMissile();
-    var mOp = clamp01((pS1 - 0.30) / 0.25);
+    // フェードイン(pS1 0.30〜0.55)→ ステージ末尾でフェードアウト(0.90〜0.98)。
+    // iframe は position:fixed のため、消しておかないと次セクションに被る
+    var mOp = clamp01((pS1 - 0.30) / 0.25) * (1 - clamp01((pS1 - 0.90) / 0.08));
     if (missileFrame) {
       missileFrame.style.opacity = mOp;
       // 表示され始めたらタッチ/クリックを iframe に渡す(フル版と同じ opacity>0.1 基準)
-      missileFrame.style.pointerEvents = (mOp > 0.1 && pS1 < 0.995) ? 'auto' : 'none';
+      missileFrame.style.pointerEvents = (mOp > 0.1) ? 'auto' : 'none';
     }
     caption.style.opacity = mOp;
   }

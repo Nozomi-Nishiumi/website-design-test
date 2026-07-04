@@ -164,15 +164,17 @@ html.enh .enh-hero-started .enh-scroll-indicator { opacity: 0; }
 
 /* ---------- セクション1層(背景は拡大済みタイルがそのまま担う) ---------- */
 
-/* ミサイル演出 iframe(常時操作ON。pointer-events は JS が表示度に応じて切替) */
+/* ミサイル演出 iframe(常時操作ON。pointer-events は JS が表示度に応じて切替)
+   iOS Safari は sticky/クリップ内の absolute iframe でタッチのヒットテストが
+   壊れる既知の癖があるため、フル版で実機動作実績のある position:fixed を採用。
+   ステージ末尾では JS が opacity を 0 に落とすため後続セクションには被らない */
 html.enh .enh-missile {
-  position: absolute;
+  position: fixed;
   inset: 0;
   z-index: 5;
   width: 100%;
   height: 100%;
   border: 0;
-  touch-action: none; /* 操作可能時に親側のネイティブパンが始まらないように */
 }
 
 /* テキスト(JS が opacity / translateY を駆動) */
