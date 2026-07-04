@@ -1,0 +1,897 @@
+@charset "utf-8";
+    html {
+      scroll-behavior: smooth;
+    }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", sans-serif;
+      line-height: 1.6;
+      color: #111;
+      background: #000;
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: transparent;
+      backdrop-filter: none; /* ← blur も不要なら消す */
+
+      color: #fff;
+    }
+
+.site-title {
+  display: flex;
+  justify-content: space-between; /* 左右に分ける */
+  align-items: center;
+  padding: 0.75rem 1.0rem;
+  font-size: 0.9rem;
+  letter-spacing: 0.15em;
+}
+
+.site-title a img {
+  display: block;
+}
+
+/* ------------------------------
+   PCレイアウト（右寄せ・2行固定）
+------------------------------ */
+.nav {
+  padding: 0.3rem 0.5rem;
+  background: transparent;
+
+
+}
+
+.nav-links {
+  display: grid;
+  grid-template-columns: repeat(3, auto); /* ✅ 3列 × 2行で強制2行 */
+  justify-content: end; /* ✅ 右寄せ */
+  gap: 0.3rem 0.5rem;
+}
+
+.nav-links a {
+  color: #ddd;
+  border-bottom: none !important;
+  text-decoration: none !important;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+
+  padding: 0.25rem 0.5rem;
+  font-size: 0.9rem;
+  
+  transition: background 0.2s ease;
+}
+
+.nav-links a:hover {
+  background: #444;
+  color: #fff;
+}
+
+a img {
+  position: relative;
+  z-index: 9999;
+  pointer-events: auto;
+}
+
+
+/* ------------------------------
+   ハンバーガー（スマホ）
+------------------------------ */
+.nav-toggle,
+.nav-toggle-label {
+  display: none;
+}
+
+.nav-toggle-label,
+.nav-links {
+  z-index: 1;
+}
+a img {
+  position: relative;
+  z-index: 2; /* 9999 じゃなくて十分 */
+}
+
+
+@media (max-width: 768px) {
+
+    #top .top-grid {
+    margin-top: -16rem !important;   /* ← これで見切れ完全解消 */
+    opacity: 1;      /* ← 背景扱いじゃないなら戻す */
+  }
+
+
+
+
+  .nav {
+    position: relative; /* ← これが基準になる */
+  }
+
+  .nav-links {
+    position: absolute;   /* ← フローから外す */
+    top: 100%;            /* ← nav のすぐ下に重ねる */
+    right: 1.5rem;        /* ← 右寄せ */
+    background: rgba(0,0,0,0.85); /* ← 背景つけると見やすい */
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+
+    display: none;
+    flex-direction: column;
+    gap: 0;
+    opacity: 0;
+    animation: fadeOut 0.3s forwards;
+  }
+
+  .nav-toggle:checked ~ .nav-links {
+    display: flex;
+    animation: fadeIn 0.3s forwards;
+  }
+
+
+  /* ハンバーガー表示 */
+  .nav-toggle-label {
+    display: block;
+    width: 32px;
+    height: 24px;
+    cursor: pointer;
+    /* position: relative; */
+    position: absolute;  /* ← nav の中で絶対配置 */
+    right: 1.5rem;       /* ← 右寄せ */
+    top: 1rem;           /* ← 上の余白はお好みで調整 */
+
+  }
+
+  .nav-toggle-label span,
+  .nav-toggle-label span::before,
+  .nav-toggle-label span::after {
+    content: "";
+    position: absolute;
+    width: 100%;
+    height: 3px;
+    background: #fff;
+    left: 0;
+    transition: 0.3s;
+  }
+
+  .nav-toggle-label span {
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  .nav-toggle-label span::before {
+    top: -8px;
+  }
+
+  .nav-toggle-label span::after {
+    top: 8px;
+  }
+
+  /* ハンバーガーONで×に変形 */
+  .nav-toggle:checked + .nav-toggle-label span {
+    background: transparent;
+  }
+  .nav-toggle:checked + .nav-toggle-label span::before {
+    top: 0;
+    transform: rotate(45deg);
+  }
+  .nav-toggle:checked + .nav-toggle-label span::after {
+    top: 0;
+    transform: rotate(-45deg);
+  }
+
+  /* ▼ スマホ時のメニュー（フェード付き） */
+  .nav-links {
+    display: none;
+    flex-direction: column;
+    gap: 0;
+    margin-top: 1rem;
+    opacity: 0;
+    animation: fadeOut 0.3s forwards;
+  }
+
+  .nav-toggle:checked ~ .nav-links {
+    display: flex;
+    animation: fadeIn 0.3s forwards;
+  }
+
+  .nav-links a {
+    padding: 0.75rem 0;
+    border-bottom: none !important;
+
+    
+  }
+}
+
+/* ------------------------------
+   フェードアニメーション
+------------------------------ */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(-5px); }
+}
+
+
+
+    main {
+      background: #000;
+      color: #f5f5f5;
+    }
+
+
+/* 画像グリッド 共通設定 */
+.top-grid {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 2rem;
+}
+
+/* ▼ スマホ（デフォルト）2列 × 3行 */
+.top-grid {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+/* グリッド内のセル（リンク） */
+ .top-grid .img-wrap {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 6px;
+  
+  display: block; /* a要素でもOKにする */
+} 
+
+/* ▼ 1行目（1番目・2番目）＝正方形 */
+.top-grid .img-wrap:nth-child(1),
+.top-grid .img-wrap:nth-child(2) {
+  aspect-ratio: 1 / 1;
+}
+
+/* ▼ 2行目（3番目・4番目）＝横長 */
+.top-grid .img-wrap:nth-child(3),
+.top-grid .img-wrap:nth-child(4) {
+  aspect-ratio: 16 / 9; /* ← 好きな比率に変更OK */
+}
+
+/* ▼ 3行目（5番目・6番目）＝横長 */
+.top-grid .img-wrap:nth-child(5),
+.top-grid .img-wrap:nth-child(6) {
+  aspect-ratio: 16 / 9;
+}
+
+/* 画像を中でトリミング */
+.top-grid .img-wrap img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+  pointer-events: none; /* クリック判定を a にだけ持たせる */
+}
+
+/* ホバーで拡大（PC時の視覚効果） */
+.top-grid .img-wrap:hover img {
+  transform: scale(1.15);
+}
+
+/* ▼ PC（768px以上） */
+/* ▼ PC（768px以上）で 2枚 + 4枚 */
+@media (min-width: 768px) {
+  .top-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  /* ✅ 1行目の2枚だけ横長にする */
+  .top-grid .img-wrap:nth-child(1),
+  .top-grid .img-wrap:nth-child(2) {
+    grid-column: span 2;
+    aspect-ratio: 16 / 9; /* ←1行目の比率 */
+  }
+
+  /* ✅ 2行目の4枚は正方形のまま */
+  .top-grid .img-wrap:nth-child(3),
+  .top-grid .img-wrap:nth-child(4),
+  .top-grid .img-wrap:nth-child(5),
+  .top-grid .img-wrap:nth-child(6) {
+    aspect-ratio: 1 / 1; /* ←2行目の比率 */
+  }
+}
+
+#top {
+  position: relative;
+}
+
+#top .top-grid {
+  margin-top: -22rem; /* ←重なり量は調整 */
+  position: relative;
+  z-index: 1;
+  opacity: 0.50; /* ← 背景として薄く見せる */
+}
+
+#top .section-inner > *:not(.top-grid) {
+  position: relative;
+  z-index: 2;
+}
+
+/* 画像の共通スタイル */
+
+img{
+ pointer-events: none;
+}
+
+.img-wrap {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 6px;
+}
+
+.img-wrap img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+
+/* ホバーで拡大 */
+.img-wrap:hover img {
+  transform: scale(1.15);
+}
+    
+    section {
+      padding: 3rem 1.5rem;
+    }
+
+    /* section:nth-of-type(odd) {
+      background: #050505;
+    }
+
+    section:nth-of-type(even) {
+      background: #101010;
+    } */
+
+    .section-inner {
+      max-width: 960px;
+      margin: 0 auto;
+      display: block;
+  height: auto;
+  overflow: visible;
+    }
+
+    h1, h2, h3, h4 {
+      margin-top: 0;
+      letter-spacing: 0.1em;
+    }
+
+/* タイトル効果 */
+.scatter-title {
+  /* font-family: "Helvetica Neue", "Segoe UI", sans-serif; */
+  /* font-weight: 300; */
+  font-size: 2.8rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #f5f5f5;
+  text-align: left;
+  display: block;
+  line-height: 1.4;
+}
+
+/* 単語ごとに改行させる */
+.scatter-title .word {
+  display: inline-block;   /* 単語単位で折り返す */
+  white-space: nowrap;     /* 単語の途中で折れない */
+  margin-right: 0.5em;     /* 単語間のスペース */
+}
+
+/* 文字のパラパラアニメ */
+.scatter-title .word span {
+  opacity: 0;
+  display: inline-block;
+  animation: scatterFade 0.8s forwards;
+}
+
+@keyframes scatterFade {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) rotate(5deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg);
+  }
+}
+
+/* ランダム遅延（例） */
+/* .scatter-title span:nth-child(1) { animation-delay: 0.05s; }
+.scatter-title span:nth-child(2) { animation-delay: 0.12s; }
+.scatter-title span:nth-child(3) { animation-delay: 0.20s; }
+.scatter-title span:nth-child(4) { animation-delay: 0.10s; }
+.scatter-title span:nth-child(5) { animation-delay: 0.28s; }
+.scatter-title span:nth-child(6) { animation-delay: 0.18s; }
+.scatter-title span:nth-child(7) { animation-delay: 0.32s; }
+.scatter-title span:nth-child(8) { animation-delay: 0.15s; }
+.scatter-title span:nth-child(9) { animation-delay: 0.40s; }
+.scatter-title span:nth-child(10){ animation-delay: 0.22s; } */
+/* 以下も続けてOK */
+
+.scatter-title span:nth-child(odd) { animation-delay: 0.1s; }
+.scatter-title span:nth-child(3n) { animation-delay: 0.35s; }
+.scatter-title span:nth-child(4n) { animation-delay: 0.55s; }
+
+/* ここまで */
+
+    .subtitle-ja {
+      margin-bottom: 0.75rem;
+    }
+
+    .university-line {
+      font-size: 0.9rem;
+      color: #ccc;
+      margin-bottom: 1.5rem;
+    }
+
+    .scroll-note {
+      font-size: 0.75rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: #888;
+    }
+
+    .section-title {
+      font-size: 1.4rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid #444;
+      padding-bottom: 0.25rem;
+    }
+
+    .images-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+
+/*セクションの基本レイアウト*/
+
+.images-row img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+  object-fit: cover;
+  flex: 1 1 120px;
+}
+
+/* =========================
+   スライドショー枠
+========================= */
+.slideshow {
+  position: relative;
+  width: 100%;
+  max-width: 600px;
+  aspect-ratio: 16 / 9;
+  margin: 0 auto;
+  overflow: hidden;
+}
+
+/* =========================
+   全画像 共通
+========================= */
+.slideshow img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 0;
+
+  animation-name: fadeInOnce;
+  animation-duration: 3s;
+  animation-timing-function: ease;
+  animation-fill-mode: forwards;
+}
+
+/* =========================
+   順番フェードイン（3秒間隔）
+========================= */
+.slideshow img:nth-child(1)  { animation-delay: 0s; }
+.slideshow img:nth-child(2)  { animation-delay: 3s; }
+.slideshow img:nth-child(3)  { animation-delay: 6s; }
+.slideshow img:nth-child(4)  { animation-delay: 9s; }
+.slideshow img:nth-child(5)  { animation-delay: 12s; }
+.slideshow img:nth-child(6)  { animation-delay: 15s; }
+.slideshow img:nth-child(7)  { animation-delay: 18s; }
+.slideshow img:nth-child(8)  { animation-delay: 21s; }
+.slideshow img:nth-child(9)  { animation-delay: 24s; }
+.slideshow img:nth-child(10) { animation-delay: 27s; }
+.slideshow img:nth-child(11) { animation-delay: 30s; }
+.slideshow img:nth-child(12) { animation-delay: 33s; }
+.slideshow img:nth-child(13) { animation-delay: 36s; }
+
+/* =========================
+   13枚目：円が広がる演出
+========================= */
+.slideshow img:nth-child(13) {
+  animation-name: fadeInOnce, revealCircle;
+  animation-duration: 3s, 10s;
+  animation-delay: 36s, 36s;
+  animation-fill-mode: forwards, forwards;
+  animation-timing-function:
+    ease,
+    cubic-bezier(0.12, 0.01, 0.08, 1);
+
+  /* マスクは固定 */
+  -webkit-mask-image: radial-gradient(circle at 30% 40%
+, black 40%, transparent 41%);
+  mask-image: radial-gradient(circle at 30% 40%
+, black 40%, transparent 41%);
+
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+
+  -webkit-mask-position: center;
+  mask-position: center;
+
+  /* ここをアニメーションする */
+  -webkit-mask-size: 10% 10%;
+  mask-size: 10% 10%;
+}
+
+/* =========================
+   フェードイン
+========================= */
+@keyframes fadeInOnce {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* =========================
+   円がじわっと広がる
+========================= */
+@keyframes revealCircle {
+  from {
+    -webkit-mask-size: 10% 10%;
+    mask-size: 10% 10%;
+  }
+  to {
+    -webkit-mask-size: 250% 250%;
+    mask-size: 250% 250%;
+  }
+}
+
+
+
+
+.fade-slider {
+  position: relative;
+  width: 100%;
+  max-width: 600px; /* 必要に応じて調整 */
+  aspect-ratio: 16/9;
+  margin: 0 auto;
+  overflow: hidden;
+}
+
+.fade-slider img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain; /* 画像を歪ませない */
+  opacity: 0;
+  animation: fadeSlide 16s infinite;
+}
+
+/* 各画像の開始タイミング */
+.fade-slider img:nth-child(1) { animation-delay: 0s; }
+.fade-slider img:nth-child(2) { animation-delay: 4s; }
+.fade-slider img:nth-child(3) { animation-delay: 8s; }
+.fade-slider img:nth-child(4) { animation-delay: 12s; }
+
+/* フェードアニメーション */
+@keyframes fadeSlide {
+  0%   { opacity: 0; }
+  10%  { opacity: 1; }
+  40%  { opacity: 1; }
+  50%  { opacity: 0; }
+  100% { opacity: 0; }
+}
+
+/* ▼ 全体を2×2のグリッドに */
+.topics-grid {
+  display: grid;
+  gap: 2rem;
+  margin-top: 3rem;
+}
+
+/* スマホ：1列 */
+.topics-grid {
+  grid-template-columns: 1fr;
+}
+
+/* PC：2列×2行 */
+@media (min-width: 768px) {
+  .topics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ▼ h4 の下を左右2カラムにする */
+.topic-inner {
+  display: grid;
+  gap: 1.5rem;
+  margin-top: 0.5rem;
+}
+
+/* スマホ：縦並び */
+.topic-inner {
+  grid-template-columns: 1fr;
+}
+
+/* PC：左テキスト + 右画像 */
+@media (min-width: 768px) {
+  .topic-inner {
+    grid-template-columns: 1fr 200px; /* ←右側の正方形サイズ */
+  }
+}
+
+/* ▼ 正方形画像枠 */
+.square-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1; /* ✅ 正方形 */
+  overflow: hidden;
+  border-radius: 6px;
+}
+
+/* ▼ 画像（fade-slider や images-row の中身） */
+.square-wrap img,
+.square-wrap .fade-slider img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.square-wrap .fade-slider {
+  position: absolute;
+  inset: 0;
+}
+
+/* ✅ topics-grid 内の fade-slider を正方形に強制 */
+.topic-block .fade-slider {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: 1 / 1 !important; /* ← 16:9 を上書き */
+  max-width: none; /* ← 600px の制限を解除 */
+  margin: 0;
+}
+
+/* ✅ 画像も正方形にフィット */
+.topic-block .fade-slider img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover !important; /* contain を上書き */
+  border-radius: 0;
+}
+
+/* スマホ：横長にする（7:3 ≒ 2.33:1） */
+@media (max-width: 767px) {
+  .square-wrap {
+    aspect-ratio: 7 / 3; /* ← 横長に変更 */
+  }
+
+  /* fade-slider も正方形を上書き */
+  .topic-block .fade-slider {
+    aspect-ratio: 7 / 3 !important;
+  }
+
+  .topic-block .fade-slider img {
+    object-fit: cover !important;
+  }
+}
+
+
+    .projects-list,
+    .text-block {
+      font-size: 0.9rem;
+      white-space: normal;
+    }
+    li {
+      list-style-type: none;
+      margin: 0 0 0.75rem;
+    }
+
+    .projects-list p,
+    .text-block p {
+      margin: 0 0 0.75rem;
+    }
+
+    .projects-list span.year {
+      font-weight: bold;
+      color: #ddd;
+    }
+
+    .contact-block {
+      font-size: 0.9rem;
+    }
+
+    .contact-block p {
+      margin: 0.25rem 0;
+    }
+
+    footer {
+      text-align: center;
+      font-size: 0.75rem;
+      color: #bbb;
+      padding: 1.5rem;
+      background: #000;
+      border-top: 1px solid #333;
+    }
+
+    a {
+      color: #8ec5ff;
+    }
+
+    a:hover,
+    a:focus {
+      color: #c0e0ff;
+    }
+
+    @media (min-width: 768px) {
+      section {
+        padding: 4rem 2rem;
+      }
+
+      h1 {
+        font-size: 2.1rem;
+      }
+
+      .section-title {
+        font-size: 1.6rem;
+      }
+    }
+
+
+
+section.parallax-section {
+  /* min-height: 100vh; */
+  min-height: auto;
+  height: auto;
+  padding: 100px 50px;
+  background-color: transparent !important;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+@media (min-width: 769px) {
+  section.parallax-section {
+    background-attachment: fixed;
+  }
+}
+
+@media (max-width: 768px) {
+  .parallax-section {
+    background-attachment: scroll; /* ← fixed を切る（必須） */
+    overflow: visible;             /* ← これが重なりを解消する */
+    padding: 80px 20px;            /* ← スマホ用に高さを安定 */
+  }
+
+  .parallax-section::before {
+    height: 100%;
+  }
+}
+
+
+
+/* 各背景の画像 */
+.img-section-01 { background-image: url('images/pigeon.png');}
+.img-section-02 { background-image: url('images/experiment1.png');}
+.img-section-03 { background-image: url('images/snake_frog.jpg');}
+.img-section-04 { background-image: url('images/trajectory.jpg');}
+.img-section-05 { background-image: url('images/dive.jpg');}
+.img-section-06 { background-image: url('images/zd-coding-ebook.jpg');}
+
+
+.parallax-section {
+  position: relative;
+  overflow: visible;
+  z-index: 0;
+}
+
+.parallax-section::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0; /* ← inset:0 より確実に高さを拾う */
+  background: rgba(0,0,0,0.7); /* ← ここで暗さ調整 */
+  z-index: 1; /* ← 背景の上、テキストの下 */
+}
+.parallax-section > * {
+  position: relative;
+  z-index: 2;
+}
+
+
+
+
+.fade-in {
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fadeUp linear forwards;
+  animation-timeline: view();
+  animation-range: entry 20% cover 30%;
+}
+@media (max-width: 768px) {
+  .fade-in {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+}
+
+@keyframes fadeUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+summary {
+  cursor: pointer;
+  transition: 0.2s; /* 変化を滑らかに */
+}
+
+summary {
+  display: list-item;
+  cursor: pointer;
+  list-style: disclosure-closed;
+  transition: 0.2s;
+}
+
+details[open] summary {
+  list-style: disclosure-open;
+}
+
+summary:hover {
+  background-color: #99ff99;
+}
+
+/* 汎用2カラムレイアウト */
+.two-column {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+  margin: 2rem 0;
+}
+
+/* 各カラムは自然に伸びる */
+.two-column .col {
+  flex: 1;
+}
+
+/* 画像やiframeを綺麗に表示 */
+.two-column img,
+.two-column iframe {
+  width: 100%;
+  height: 300px;
+  display: block;
+}
+@media (max-width: 768px) {
+  .two-column {
+    flex-direction: column;
+    /* height: 120px; */
+  }
+  .two-column iframe {
+    height: 200px;
+  }
+}
+
