@@ -28,7 +28,10 @@ html.enh .enh-stage-sticky {
   position: sticky;
   top: 0;
   height: 100vh;
-  overflow: clip; /* 拡大タイルのはみ出しをここで閉じ込める */
+  /* overflow は付けない: WebKit は overflow:clip を持つ要素の sticky 解放を
+     再描画しないバグがあり、ページはスクロールするのに絵が貼り付いたままの
+     「見かけ上のフリーズ」になる(実機HUDで確認済み)。
+     拡大タイルのクリップは子の .enh-hero-inner が担う */
   background: #000;
   /* 後続の高さマーカー(#top/#section-1 は base CSS で z-index:0 の
      positioned 要素)より上に描画しないと、透明なマーカーが全タッチを
@@ -61,6 +64,10 @@ html.enh .enh-hero-inner {
   max-width: none;
   margin: 0;
   padding: 0;
+  /* 拡大タイルのはみ出しをここで閉じ込める(sticky 本体に overflow を
+     付けると WebKit の解放バグを踏むため、この子レイヤーが担当)。
+     overflow:hidden の div はユーザー操作ではスクロールしないので安全 */
+  overflow: hidden;
 }
 
 /* タイルグリッド(フル演出版の12カラム構成を再現) */
