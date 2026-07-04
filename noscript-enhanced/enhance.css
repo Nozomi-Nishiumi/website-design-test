@@ -183,12 +183,17 @@ html.enh .enh-hero-started .enh-scroll-indicator { opacity: 0; }
 
 /* ---------- セクション1層(背景は拡大済みタイルがそのまま担う) ---------- */
 
-/* ミサイル演出 iframe(常時操作ON。pointer-events は JS が表示度に応じて切替)
-   iOS Safari は sticky/クリップ内の absolute iframe でタッチのヒットテストが
-   壊れる既知の癖があるため、フル版で実機動作実績のある position:fixed を採用。
-   ステージ末尾では JS が opacity を 0 に落とすため後続セクションには被らない */
+/* ミサイル演出 iframe(常時操作ON)
+   fixed は禁止: 全画面 fixed iframe は opacity:0 / pointer-events:none でも
+   iOS のタッチ領域キャッシュ(PE を無視する既知バグ)がビューポート全域を
+   「touch-action:none の iframe 領域」と誤認し続け、ステージ外でも
+   タッチスクロールが二度と開始されないフリーズを断続的に起こす
+   (実機HUD: move は cancelable のまま届くが scroll 0px = WebKit が
+   スクロール開始を拒否している状態)。absolute なら領域はステージと共に
+   スクロールアウトする。タッチ入力は親タッチ層からの注入なので
+   iframe 自体のヒットテストは不要(fixed にしていた理由は既に消滅) */
 html.enh .enh-missile {
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: 5;
   width: 100%;

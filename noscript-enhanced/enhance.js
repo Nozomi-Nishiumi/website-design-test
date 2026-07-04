@@ -16,7 +16,7 @@
   'use strict';
 
   // デプロイごとに更新するバージョン(キャッシュバスティング/HUD表示用)
-  var ENH_VERSION = '20260705c';
+  var ENH_VERSION = '20260705d';
 
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
@@ -290,8 +290,7 @@
     s1Inner.style.transform = 'translateY(' + (1 - tOp) * 40 + 'px)';
 
     if (scrolled > geo.heroRange * 0.8) mountMissile();
-    // フェードイン(pS1 0.30〜0.55)→ ステージ末尾でフェードアウト(0.90〜0.98)。
-    // iframe は position:fixed のため、消しておかないと次セクションに被る
+    // フェードイン(pS1 0.30〜0.55)→ ステージ末尾でフェードアウト(0.90〜0.98)
     var mOp = clamp01((pS1 - 0.30) / 0.25) * (1 - clamp01((pS1 - 0.90) / 0.08));
     dbg.pS1 = pS1;
     dbg.mOp = mOp;
