@@ -215,3 +215,18 @@ html.enh .enh-cap-text {
   color: #fff;
   text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
 }
+
+/* デバッグHUD(?debug=1 のときのみ JS が生成) */
+html.enh .enh-debug-hud {
+  position: fixed;
+  top: 60px;
+  left: 8px;
+  z-index: 9999;
+  padding: 6px 8px;
+  background: rgba(0, 0, 0, 0.75);
+  color: #9f9;
+  font: 11px/1.5 monospace;
+  white-space: pre-wrap;
+  pointer-events: none;
+  border-radius: 6px;
+}

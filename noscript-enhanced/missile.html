@@ -333,6 +333,18 @@
   const USE_CURSOR_AIM = matchMedia('(pointer:fine)').matches;
   let mouse = {x: W*0.6, y: H*0.3};
 
+  // デバッグ計測(?debug=1 のときだけ親ページのHUDへ統計を送信)
+  const DBG = /[?&]debug=1/.test(location.search);
+  const dbgStat = {ts:0, tm:0, te:0, pd:0, relay:0, raf:0};
+  function dbgPost(){
+    if(!DBG) return;
+    try{
+      parent.postMessage({type:'missileDebug', stat: dbgStat,
+        active: pointer.active, ox: Math.round(aimOffset.ox), oy: Math.round(aimOffset.oy)}, '*');
+    }catch(_){}
+  }
+  if(DBG) setInterval(dbgPost, 500);
+
   // シングルタップ判定用(ドラッグと区別するため切替は touchend で行う)
   let tapStart = {x:0, y:0, t:0, moved:false};
   let lastTouchEnd = 0; // タップ後に iOS が発生させる合成マウスイベントの除外用
@@ -341,6 +353,7 @@
     const t=e.touches?e.touches[0]:e;
     pointer.active=true; pointer.lastX=t.clientX; pointer.lastY=t.clientY;
     if(e.touches){
+      dbgStat.ts++;
       // タッチ: ここでは切り替えない(タップかドラッグかは touchend で確定)
       tapStart = {x:t.clientX, y:t.clientY, t:Date.now(), moved:false};
       return;
@@ -432,16 +445,18 @@
       // ブラウザがそのスワイプ全体をスクロール操作として接収し、以後この
       // ジェスチャ中はミサイル操作不能+ページが横に動く。縦限界時の
       // ページスクロールは下の postMessage ブリッジ経由で行う。
-      if (e.cancelable) e.preventDefault();
+      if (e.cancelable) { e.preventDefault(); dbgStat.pd++; }
+      dbgStat.tm++;
 
       if (!atVerticalLimit) {
         // Within range: Prioritize missile control
         aimOffset.ox = clamp(newOx, -maxX, maxX);
         aimOffset.oy = clamp(newOy, -maxY, maxY);
       } else {
-        // Reached vertical edge: Request scroll to parent window
-        // Use 1:1 pixel mapping (no multiplier) to avoid jumps
+        // 縦限界: 横方向の照準は引き続き更新し、縦分だけページスクロールへ中継
+        aimOffset.ox = clamp(newOx, -maxX, maxX);
         if(window.parent && window.parent !== window){
+          dbgStat.relay++;
           window.parent.postMessage({
             type: 'missileScroll',
             deltaY: -dy
@@ -456,6 +471,7 @@
   function onUp(e){
     pointer.active=false;
     if(e && e.changedTouches && e.changedTouches[0]){
+      dbgStat.te++;
       lastTouchEnd = Date.now();
       const t = e.changedTouches[0];
       const quick = (lastTouchEnd - tapStart.t) < 350;
@@ -885,6 +901,7 @@
 
     ctx.globalCompositeOperation = prev;
 
+    dbgStat.raf++;
     requestAnimationFrame(step);
   }
 

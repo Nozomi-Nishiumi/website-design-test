@@ -84,11 +84,33 @@
 
   var missileFrame = null;
 
+  // デバッグHUD: URL に ?debug=1 を付けると実機の内部状態を画面に表示する
+  var DEBUG = /[?&]debug=1/.test(location.search);
+  var dbg = { relay: 0, lastDy: 0, pS1: 0, mOp: 0, ifr: null };
+  var hud = null;
+  if (DEBUG) {
+    hud = document.createElement('div');
+    hud.className = 'enh-debug-hud';
+    document.body.appendChild(hud);
+    setInterval(function () {
+      var f = dbg.ifr || {};
+      var st = f.stat || {};
+      hud.textContent =
+        'scrollY:' + Math.round(window.pageYOffset) +
+        ' pS1:' + dbg.pS1.toFixed(2) + ' mOp:' + dbg.mOp.toFixed(2) +
+        ' PE:' + (missileFrame ? missileFrame.style.pointerEvents : '-') +
+        '\n親: relay受信:' + dbg.relay + ' lastDy:' + dbg.lastDy +
+        '\niframe: ts:' + (st.ts || 0) + ' tm:' + (st.tm || 0) + ' pd:' + (st.pd || 0) +
+        ' te:' + (st.te || 0) + ' relay送信:' + (st.relay || 0) + ' raf:' + (st.raf || 0) +
+        '\nactive:' + f.active + ' ox:' + f.ox + ' oy:' + f.oy;
+    }, 500);
+  }
+
   function mountMissile() {
     if (missileFrame) return;
     missileFrame = document.createElement('iframe');
     missileFrame.className = 'enh-missile';
-    missileFrame.src = 'missile.html';
+    missileFrame.src = 'missile.html' + (DEBUG ? '?debug=1' : '');
     missileFrame.setAttribute('frameborder', '0');
     missileFrame.setAttribute('title', 'ミサイル演出');
     missileFrame.style.opacity = '0';
@@ -101,12 +123,22 @@
   // preventDefault しているため、ページスクロールへの引き継ぎはこれが唯一の経路)
   function onMissileScroll(deltaY) {
     if (typeof deltaY !== 'number' || !isFinite(deltaY)) return;
-    // ページの scroll-behavior:smooth に引きずられて中継が滑らないよう instant 指定
-    window.scrollBy({ top: Math.max(-200, Math.min(200, deltaY)), behavior: 'instant' });
+    var dy = Math.max(-200, Math.min(200, deltaY));
+    // 'instant' は Safari の一部で未知の列挙値として TypeError になるため使わない。
+    // 代わりに html の scroll-behavior:smooth を一瞬だけ無効化して即時スクロール。
+    var rootStyle = document.documentElement.style;
+    var prev = rootStyle.scrollBehavior;
+    rootStyle.scrollBehavior = 'auto';
+    window.scrollBy(0, dy);
+    rootStyle.scrollBehavior = prev;
+    dbg.relay++;
+    dbg.lastDy = Math.round(dy);
   }
   window.addEventListener('message', function (e) {
     if (!missileFrame || e.source !== missileFrame.contentWindow) return;
-    if (e.data && e.data.type === 'missileScroll') onMissileScroll(e.data.deltaY);
+    if (!e.data) return;
+    if (e.data.type === 'missileScroll') onMissileScroll(e.data.deltaY);
+    if (e.data.type === 'missileDebug') dbg.ifr = e.data;
   });
 
   /* ---------- 幾何計測(transform を外した状態で計測) ---------- */
@@ -171,6 +203,8 @@
     // フェードイン(pS1 0.30〜0.55)→ ステージ末尾でフェードアウト(0.90〜0.98)。
     // iframe は position:fixed のため、消しておかないと次セクションに被る
     var mOp = clamp01((pS1 - 0.30) / 0.25) * (1 - clamp01((pS1 - 0.90) / 0.08));
+    dbg.pS1 = pS1;
+    dbg.mOp = mOp;
     if (missileFrame) {
       missileFrame.style.opacity = mOp;
       // 表示され始めたらタッチ/クリックを iframe に渡す(フル版と同じ opacity>0.1 基準)
