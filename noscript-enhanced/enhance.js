@@ -90,7 +90,7 @@
 
   // デバッグHUD: URL に ?debug=1 を付けると実機の内部状態を画面に表示する
   var DEBUG = /[?&]debug=1/.test(location.search);
-  var dbg = { relay: 0, lastDy: 0, pS1: 0, mOp: 0, fw: 0, lt: 0, cap: false, ifr: null };
+  var dbg = { relay: 0, lastDy: 0, pS1: 0, mOp: 0, fw: 0, lt: 0, cap: false, wd: 0, ifr: null };
   var hud = null;
   if (DEBUG) {
     hud = document.createElement('div');
@@ -105,6 +105,10 @@
         ' PE:' + (missileFrame ? missileFrame.style.pointerEvents : '-') +
         '\n親: relay受信:' + dbg.relay + ' lastDy:' + dbg.lastDy +
         ' 注入:' + dbg.fw + ' 層受信:' + dbg.lt + ' 捕捉:' + dbg.cap +
+        '\n診断: docH:' + Math.round(document.scrollingElement.scrollHeight) +
+        ' iH:' + window.innerHeight +
+        ' stageEnd:' + Math.round(stage.offsetTop + stage.offsetHeight) +
+        ' WD:' + dbg.wd +
         '\niframe: ts:' + (st.ts || 0) + ' tm:' + (st.tm || 0) + ' pd:' + (st.pd || 0) +
         ' te:' + (st.te || 0) + ' relay送信:' + (st.relay || 0) + ' raf:' + (st.raf || 0) +
         '\nactive:' + f.active + ' ox:' + f.ox + ' oy:' + f.oy;
@@ -132,6 +136,8 @@
       touchLayer.className = 'enh-touch-layer';
       sticky.appendChild(touchLayer);
       var gestureCapture = false;
+      var gStartY = 0;      // ジェスチャ開始時のタッチY
+      var gStartScroll = 0; // ジェスチャ開始時の scrollY
       var send = function (fn, t) {
         var w = missileFrame && missileFrame.contentWindow;
         if (w && w.__missileInput) { w.__missileInput[fn](t.clientX, t.clientY); dbg.fw++; }
@@ -141,7 +147,11 @@
         // ミサイルが十分見えている間だけ、このジェスチャを操作として捕捉
         gestureCapture = dbg.mOp > 0.1 && dbg.pS1 < 0.92;
         dbg.cap = gestureCapture;
-        if (gestureCapture && e.touches[0]) send('down', e.touches[0]);
+        if (e.touches[0]) {
+          gStartY = e.touches[0].clientY;
+          gStartScroll = window.pageYOffset;
+          if (gestureCapture) send('down', e.touches[0]);
+        }
       }, { passive: true });
       touchLayer.addEventListener('touchmove', function (e) {
         if (!gestureCapture) return; // 素通し: ネイティブスクロール
@@ -149,7 +159,17 @@
         if (e.touches[0]) send('move', e.touches[0]);
       }, { passive: false });
       touchLayer.addEventListener('touchend', function (e) {
-        if (gestureCapture && e.changedTouches[0]) send('up', e.changedTouches[0]);
+        var t = e.changedTouches && e.changedTouches[0];
+        if (gestureCapture && t) send('up', t);
+        // ウォッチドッグ: 素通しスワイプ(40px以上)なのにネイティブスクロールが
+        // 1px も動いていなければ、原因が何であれ JS が代行スクロールして脱出させる
+        if (!gestureCapture && t) {
+          var swipe = gStartY - t.clientY; // 下方向スワイプ = 正
+          if (Math.abs(swipe) > 40 && Math.abs(window.pageYOffset - gStartScroll) < 1) {
+            dbg.wd++;
+            onMissileScroll(swipe);
+          }
+        }
         gestureCapture = false;
         dbg.cap = false;
       }, { passive: true });
@@ -161,7 +181,7 @@
   // preventDefault しているため、ページスクロールへの引き継ぎはこれが唯一の経路)
   function onMissileScroll(deltaY) {
     if (typeof deltaY !== 'number' || !isFinite(deltaY)) return;
-    var dy = Math.max(-200, Math.min(200, deltaY));
+    var dy = Math.max(-600, Math.min(600, deltaY));
     // 'instant' は Safari の一部で未知の列挙値として TypeError になるため使わない。
     // 代わりに html の scroll-behavior:smooth を一瞬だけ無効化して即時スクロール。
     var rootStyle = document.documentElement.style;
