@@ -10,11 +10,14 @@
        └ #section-1(200vh の高さ確保マーカー兼ナビ用アンカー)
    ========================================================================== */
 
-/* 横パン・横ラバーバンドの保険(フル版で実証済みの対策の移植) */
-html.enh,
-html.enh body {
+/* 横パン防止: フル版(fix/horizontal-pan-section1)で実機実証済みの構成に
+   正確に一致させる = body と main のみに overflow-x: clip。
+   html(ルート)への clip や overscroll-behavior-x は iOS の
+   スクロールツリーを狂わせてタッチスクロール全体が死ぬ既知の不具合系
+   (全域計測で「指117px移動/スクロール0px」のラッチ状態を実機確認) */
+html.enh body,
+html.enh main {
   overflow-x: clip;
-  overscroll-behavior-x: none;
 }
 
 /* smooth スクロール無効化(重要):

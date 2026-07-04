@@ -16,7 +16,7 @@
   'use strict';
 
   // デプロイごとに更新するバージョン(キャッシュバスティング/HUD表示用)
-  var ENH_VERSION = '20260705b';
+  var ENH_VERSION = '20260705c';
 
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
@@ -106,13 +106,16 @@
     document.addEventListener('touchstart', function (e) {
       if (e.touches[0]) { gY = e.touches[0].clientY; gScrollY = window.pageYOffset; }
     }, { passive: true, capture: true });
+    dbg.gPd = 0; dbg.gNc = 0;
     document.addEventListener('touchmove', function (e) {
       dbg.gTm++;
+      if (e.defaultPrevented) dbg.gPd++;   // 誰かが preventDefault した move
+      if (!e.cancelable) dbg.gNc++;        // ブラウザが既にスクロール専有した move
       if (e.touches[0]) {
         dbg.gMove = Math.round(gY - e.touches[0].clientY);
         dbg.gScroll = Math.round(window.pageYOffset - gScrollY);
       }
-    }, { passive: true, capture: true });
+    }, { passive: true, capture: false });
     setInterval(function () {
       var f = dbg.ifr || {};
       var st = f.stat || {};
@@ -127,7 +130,8 @@
         ' iH:' + window.innerHeight +
         ' stageEnd:' + Math.round(stage.offsetTop + stage.offsetHeight) +
         ' WD:' + dbg.wd + ' カメラ:' + (dbg.bg ? 'ON' : 'off') +
-        '\n全域: 移動:' + dbg.gTm + '回 直近指:' + dbg.gMove + 'px 直近scroll:' + dbg.gScroll + 'px' +
+        '\n全域: 移動:' + dbg.gTm + '回 PD:' + dbg.gPd + ' 非cancel:' + dbg.gNc +
+        ' 直近指:' + dbg.gMove + 'px 直近scroll:' + dbg.gScroll + 'px' +
         '\niframe: ts:' + (st.ts || 0) + ' tm:' + (st.tm || 0) + ' pd:' + (st.pd || 0) +
         ' te:' + (st.te || 0) + ' relay送信:' + (st.relay || 0) + ' raf:' + (st.raf || 0) +
         '\nactive:' + f.active + ' ox:' + f.ox + ' oy:' + f.oy;
