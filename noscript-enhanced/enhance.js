@@ -171,8 +171,8 @@
     var mOp = clamp01((pS1 - 0.30) / 0.25);
     if (missileFrame) {
       missileFrame.style.opacity = mOp;
-      // 十分に表示されている間だけタッチ/クリックを iframe に渡す
-      missileFrame.style.pointerEvents = (mOp >= 0.6 && pS1 < 0.995) ? 'auto' : 'none';
+      // 表示され始めたらタッチ/クリックを iframe に渡す(フル版と同じ opacity>0.1 基準)
+      missileFrame.style.pointerEvents = (mOp > 0.1 && pS1 < 0.995) ? 'auto' : 'none';
     }
     caption.style.opacity = mOp;
   }
