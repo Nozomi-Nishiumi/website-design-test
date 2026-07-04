@@ -314,7 +314,6 @@
   // ===== Input (PC=cursor tracking / Touch=drag delta x1.8) =====
   const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints>0);
   let running = true;
-  let lastTap = 0; // For mobile double-tap detection
   let showBackground = false; // Background display flag (default: off)
 
   // State for glitch effect
@@ -334,14 +333,25 @@
   const USE_CURSOR_AIM = matchMedia('(pointer:fine)').matches;
   let mouse = {x: W*0.6, y: H*0.3};
 
+  // シングルタップ判定用(ドラッグと区別するため切替は touchend で行う)
+  let tapStart = {x:0, y:0, t:0, moved:false};
+  let lastTouchEnd = 0; // タップ後に iOS が発生させる合成マウスイベントの除外用
+
   function onDown(e){
     const t=e.touches?e.touches[0]:e;
     pointer.active=true; pointer.lastX=t.clientX; pointer.lastY=t.clientY;
-    const n = Date.now();
-    const shouldTrigger = e.touches ? (n - lastTap < 300) : true;
-    if(e.touches) lastTap = n;
-    if(shouldTrigger) {
-      // Single click (PC) / Double tap (mobile): Start glitch effect
+    if(e.touches){
+      // タッチ: ここでは切り替えない(タップかドラッグかは touchend で確定)
+      tapStart = {x:t.clientX, y:t.clientY, t:Date.now(), moved:false};
+      return;
+    }
+    if(Date.now() - lastTouchEnd < 700) return; // タップ直後の合成 mousedown を無視
+    triggerCameraToggle(); // PC: シングルクリックで切替
+  }
+
+  function triggerCameraToggle(){
+    {
+      // Single click (PC) / Single tap (mobile): Start glitch effect
       targetBackgroundState = !showBackground;
 
       // Pre-render transition target image offscreen
@@ -400,6 +410,10 @@
     }else{
       if(!pointer.active) return;
       const t=e.touches?e.touches[0]:e;
+      if(e.touches && !tapStart.moved &&
+         Math.hypot(t.clientX - tapStart.x, t.clientY - tapStart.y) > 12){
+        tapStart.moved = true; // 12px以上動いたらドラッグ(タップではない)
+      }
       const dx = t.clientX - pointer.lastX;
       const dy = t.clientY - pointer.lastY;
 
@@ -439,7 +453,17 @@
       pointer.lastY = t.clientY;
     }
   }
-  function onUp(){ pointer.active=false; }
+  function onUp(e){
+    pointer.active=false;
+    if(e && e.changedTouches && e.changedTouches[0]){
+      lastTouchEnd = Date.now();
+      const t = e.changedTouches[0];
+      const quick = (lastTouchEnd - tapStart.t) < 350;
+      const still = !tapStart.moved &&
+        Math.hypot(t.clientX - tapStart.x, t.clientY - tapStart.y) < 12;
+      if(quick && still) triggerCameraToggle(); // シングルタップで切替
+    }
+  }
 
   cv.addEventListener('touchstart', onDown, {passive:true});
   cv.addEventListener('touchmove',  onMove, {passive:false});
