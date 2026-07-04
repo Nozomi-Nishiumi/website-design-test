@@ -90,7 +90,7 @@
 
   // デバッグHUD: URL に ?debug=1 を付けると実機の内部状態を画面に表示する
   var DEBUG = /[?&]debug=1/.test(location.search);
-  var dbg = { relay: 0, lastDy: 0, pS1: 0, mOp: 0, fw: 0, ifr: null };
+  var dbg = { relay: 0, lastDy: 0, pS1: 0, mOp: 0, fw: 0, lt: 0, cap: false, ifr: null };
   var hud = null;
   if (DEBUG) {
     hud = document.createElement('div');
@@ -104,7 +104,7 @@
         ' pS1:' + dbg.pS1.toFixed(2) + ' mOp:' + dbg.mOp.toFixed(2) +
         ' PE:' + (missileFrame ? missileFrame.style.pointerEvents : '-') +
         '\n親: relay受信:' + dbg.relay + ' lastDy:' + dbg.lastDy +
-        ' 注入:' + dbg.fw + ' touch層:' + (touchLayer ? touchLayer.style.pointerEvents : '-') +
+        ' 注入:' + dbg.fw + ' 層受信:' + dbg.lt + ' 捕捉:' + dbg.cap +
         '\niframe: ts:' + (st.ts || 0) + ' tm:' + (st.tm || 0) + ' pd:' + (st.pd || 0) +
         ' te:' + (st.te || 0) + ' relay送信:' + (st.relay || 0) + ' raf:' + (st.raf || 0) +
         '\nactive:' + f.active + ' ox:' + f.ox + ' oy:' + f.oy;
@@ -123,26 +123,35 @@
     sticky.insertBefore(missileFrame, s1Inner);
 
     if (TOUCH_DEVICE) {
-      // 親側の透明タッチ層。受けたタッチを missile.html へ関数呼び出しで注入する
+      // 親側の透明タッチ層。受けたタッチを missile.html へ関数呼び出しで注入する。
+      // pointer-events は常時 auto(動的切替はしない)。ミサイル操作として捕捉
+      // するかどうかは touchstart の瞬間に1回だけ決め、捕捉しないジェスチャには
+      // 一切干渉しない=ネイティブスクロールが必ず通り、セクション1に閉じ込め
+      // られることが構造的に起こらない。
       touchLayer = document.createElement('div');
       touchLayer.className = 'enh-touch-layer';
-      touchLayer.style.pointerEvents = 'none';
       sticky.appendChild(touchLayer);
+      var gestureCapture = false;
       var send = function (fn, t) {
         var w = missileFrame && missileFrame.contentWindow;
         if (w && w.__missileInput) { w.__missileInput[fn](t.clientX, t.clientY); dbg.fw++; }
       };
       touchLayer.addEventListener('touchstart', function (e) {
-        if (e.touches[0]) send('down', e.touches[0]);
+        dbg.lt++;
+        // ミサイルが十分見えている間だけ、このジェスチャを操作として捕捉
+        gestureCapture = dbg.mOp > 0.1 && dbg.pS1 < 0.92;
+        dbg.cap = gestureCapture;
+        if (gestureCapture && e.touches[0]) send('down', e.touches[0]);
       }, { passive: true });
       touchLayer.addEventListener('touchmove', function (e) {
-        // ミサイル操作を優先(縦限界時のページスクロールは missile.html からの
-        // postMessage 中継で行われる)
+        if (!gestureCapture) return; // 素通し: ネイティブスクロール
         if (e.cancelable) e.preventDefault();
         if (e.touches[0]) send('move', e.touches[0]);
       }, { passive: false });
       touchLayer.addEventListener('touchend', function (e) {
-        if (e.changedTouches[0]) send('up', e.changedTouches[0]);
+        if (gestureCapture && e.changedTouches[0]) send('up', e.changedTouches[0]);
+        gestureCapture = false;
+        dbg.cap = false;
       }, { passive: true });
     }
   }
@@ -236,13 +245,11 @@
     dbg.mOp = mOp;
     if (missileFrame) {
       missileFrame.style.opacity = mOp;
-      var live = mOp > 0.1;
-      if (TOUCH_DEVICE) {
-        // iOS: iframe の PE は none のまま固定し、親側タッチ層で入力を受ける
-        if (touchLayer) touchLayer.style.pointerEvents = live ? 'auto' : 'none';
-      } else {
-        missileFrame.style.pointerEvents = live ? 'auto' : 'none';
+      if (!TOUCH_DEVICE) {
+        // PC: 従来どおり iframe を直接操作(表示中のみ)
+        missileFrame.style.pointerEvents = (mOp > 0.1) ? 'auto' : 'none';
       }
+      // タッチ端末はタッチ層が常時入力を受け、ジェスチャ単位で捕捉/素通しを判断
     }
     caption.style.opacity = mOp;
   }

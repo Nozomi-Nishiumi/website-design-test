@@ -237,6 +237,7 @@ html.enh .enh-touch-layer {
   position: absolute;
   inset: 0;
   z-index: 8;
-  touch-action: none;
+  /* touch-action は指定しない: 素通しジェスチャのネイティブスクロールを
+     CSSレベルで妨げないため。捕捉時は JS の preventDefault で止める */
   background: transparent;
 }
