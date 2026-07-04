@@ -90,7 +90,7 @@
 
   // デバッグHUD: URL に ?debug=1 を付けると実機の内部状態を画面に表示する
   var DEBUG = /[?&]debug=1/.test(location.search);
-  var dbg = { relay: 0, lastDy: 0, pS1: 0, mOp: 0, fw: 0, lt: 0, cap: false, wd: 0, ifr: null };
+  var dbg = { relay: 0, lastDy: 0, pS1: 0, mOp: 0, fw: 0, lt: 0, cap: false, wd: 0, bg: false, ifr: null };
   var hud = null;
   if (DEBUG) {
     hud = document.createElement('div');
@@ -108,7 +108,7 @@
         '\n診断: docH:' + Math.round(document.scrollingElement.scrollHeight) +
         ' iH:' + window.innerHeight +
         ' stageEnd:' + Math.round(stage.offsetTop + stage.offsetHeight) +
-        ' WD:' + dbg.wd +
+        ' WD:' + dbg.wd + ' カメラ:' + (dbg.bg ? 'ON' : 'off') +
         '\niframe: ts:' + (st.ts || 0) + ' tm:' + (st.tm || 0) + ' pd:' + (st.pd || 0) +
         ' te:' + (st.te || 0) + ' relay送信:' + (st.relay || 0) + ' raf:' + (st.raf || 0) +
         '\nactive:' + f.active + ' ox:' + f.ox + ' oy:' + f.oy;
@@ -158,6 +158,11 @@
         if (e.cancelable) e.preventDefault();
         if (e.touches[0]) send('move', e.touches[0]);
       }, { passive: false });
+      touchLayer.addEventListener('touchcancel', function () {
+        // システムジェスチャ等で touchend が来ない場合の張り付き防止
+        gestureCapture = false;
+        dbg.cap = false;
+      }, { passive: true });
       touchLayer.addEventListener('touchend', function (e) {
         var t = e.changedTouches && e.changedTouches[0];
         if (gestureCapture && t) send('up', t);
@@ -197,6 +202,14 @@
     if (!e.data) return;
     if (e.data.type === 'missileScroll') onMissileScroll(e.data.deltaY);
     if (e.data.type === 'missileDebug') dbg.ifr = e.data;
+    if (e.data.type === 'missileState') {
+      dbg.bg = !!e.data.bg;
+      caption.innerHTML = dbg.bg
+        ? '<p class="enh-cap-title">ドローンカメラ接続中</p>' +
+          '<p class="enh-cap-text">なぞって見回す / もう一度タップで切断</p>'
+        : '<p class="enh-cap-title">逃げる者と追う者の移動戦略</p>' +
+          '<p class="enh-cap-text">画面クリックでドローンカメラに接続</p>';
+    }
   });
 
   /* ---------- 幾何計測(transform を外した状態で計測) ---------- */

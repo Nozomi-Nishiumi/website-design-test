@@ -366,6 +366,10 @@
     {
       // Single click (PC) / Single tap (mobile): Start glitch effect
       targetBackgroundState = !showBackground;
+      // 親ページへカメラ状態を通知(キャプション表示の切替に使う)
+      if(window.parent && window.parent !== window){
+        try{ window.parent.postMessage({type:'missileState', bg: targetBackgroundState}, '*'); }catch(_){}
+      }
 
       // Pre-render transition target image offscreen
       glitchTargetCanvas = document.createElement('canvas');
@@ -493,6 +497,7 @@
   cv.addEventListener('touchstart', onDown, {passive:true});
   cv.addEventListener('touchmove',  onMove, {passive:false});
   cv.addEventListener('touchend',   onUp,   {passive:true});
+  cv.addEventListener('touchcancel', function(){ pointer.active = false; }, {passive:true});
   cv.addEventListener('mousedown',  onDown);
   addEventListener('mousemove', onMove);
   addEventListener('mouseup',   onUp);
