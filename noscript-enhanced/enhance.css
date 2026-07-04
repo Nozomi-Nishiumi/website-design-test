@@ -1,0 +1,216 @@
+/* ==========================================================================
+   enhance.css — noscript版への漸進強化スタイル(トップ+セクション1のみ)
+   すべて html.enh 配下 = enhance.js が有効化した時のみ適用。
+   JS が動かなければこのファイルは何もせず、noscript 版がそのまま表示される。
+   ========================================================================== */
+
+/* ---------- ヒーロー(トップ): sticky ステージ ---------- */
+
+html.enh #top {
+  height: 260vh;
+  position: relative;
+}
+
+html.enh .enh-hero-sticky {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: clip; /* 拡大タイルのはみ出しをここで閉じ込める(横パン防止) */
+  background: #000;
+}
+
+html.enh #top .section-inner {
+  position: absolute;
+  inset: 0;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* タイルグリッド(フル演出版の12カラム構成を再現) */
+html.enh #top .top-grid {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 1;
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 15px;
+  padding: 72px 20px 20px; /* ヘッダー分を空ける */
+}
+
+html.enh #top .top-grid .img-wrap {
+  aspect-ratio: auto;
+  border-radius: 8px;
+  will-change: transform, opacity;
+}
+
+/* 写真1(pigeon)=8/12幅・写真2=4/12幅・写真3〜6=各3/12幅 */
+html.enh #top .top-grid .img-wrap:nth-child(1) { grid-column: span 8; z-index: 2; }
+html.enh #top .top-grid .img-wrap:nth-child(2) { grid-column: span 4; }
+html.enh #top .top-grid .img-wrap:nth-child(n+3) { grid-column: span 3; }
+
+/* 拡大中は hover ズームとリンククリックを無効化 */
+html.enh #top .top-grid .img-wrap:hover img { transform: none; }
+html.enh #top .top-grid.enh-no-click a { pointer-events: none; }
+
+@media (max-width: 600px) {
+  html.enh #top .top-grid {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: 10px;
+    padding: 64px 12px 12px;
+  }
+  html.enh #top .top-grid .img-wrap:nth-child(n+1) { grid-column: span 1; }
+}
+
+/* 暗色グラデーションオーバーレイ(フル版 hero-overlay-dynamic 相当) */
+html.enh .enh-hero-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0.65) 100%);
+}
+
+/* タイトル・サブタイトルのオーバーレイ配置 */
+html.enh .enh-hero-text {
+  position: absolute;
+  z-index: 4;
+  left: 40px;
+  right: 40px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+html.enh .enh-hero-text .scatter-title {
+  font-size: clamp(1.9rem, 5vw, 4.2rem);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+html.enh .enh-hero-text .subtitle-ja,
+html.enh .enh-hero-text .university-line {
+  color: #f0f0f0;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7);
+}
+@media (max-width: 600px) {
+  html.enh .enh-hero-text { left: 20px; right: 20px; }
+}
+
+/* スクロールインジケーター */
+html.enh .enh-scroll-indicator {
+  position: absolute;
+  z-index: 4;
+  bottom: 18px;
+  left: 50%;
+  color: #fff;
+  opacity: 0.75;
+  font-size: 11px;
+  letter-spacing: 0.35em;
+  pointer-events: none;
+  transform: translateX(-50%);
+  animation: enhPulse 2s ease-in-out infinite;
+  transition: opacity 0.3s;
+}
+html.enh .enh-hero-started .enh-scroll-indicator { opacity: 0; }
+@keyframes enhPulse {
+  50% { transform: translate(-50%, 6px); }
+}
+
+/* ---------- セクション1: sticky ステージ ---------- */
+
+html.enh #section-1 {
+  height: 300vh;
+  padding: 0 !important;
+  background-image: none !important; /* 背景は sticky 側で表示 */
+}
+html.enh #section-1::before { display: none; } /* 素の暗幕は sticky 側に移設 */
+
+html.enh .enh-s1-sticky {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: clip;
+  background-image: url('images/pigeon.png'); /* ヒーローで拡大した写真1と連続 */
+  background-size: cover;
+  background-position: center;
+}
+html.enh .enh-s1-sticky::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: rgba(0, 0, 0, 0.65); /* フル版と同じ暗さ */
+}
+
+/* ミサイル演出 iframe(背景の上・テキストの下) */
+html.enh .enh-missile {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  pointer-events: none; /* 通常時はスクロールを一切妨げない */
+}
+
+/* テキスト(JS が opacity / translateY を駆動) */
+html.enh #section-1 .section-inner {
+  position: absolute;
+  z-index: 3;
+  left: 0;
+  right: 0;
+  top: 16vh;
+  margin: 0 auto;
+  width: min(88%, 960px);
+  opacity: 0;
+  pointer-events: none;
+  animation: none; /* 素の .fade-in(view() 連動)は無効化して JS 制御に一本化 */
+}
+
+/* ミサイル演出キャプション */
+html.enh .enh-missile-caption {
+  position: absolute;
+  z-index: 4;
+  right: 24px;
+  bottom: 72px;
+  text-align: right;
+  opacity: 0;
+  pointer-events: none;
+}
+html.enh .enh-cap-title {
+  margin: 0 0 2px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffd98a;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
+}
+html.enh .enh-cap-text {
+  margin: 0;
+  font-size: 12px;
+  color: #fff;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
+}
+
+/* 演出操作の切替ボタン(ミサイル表示中のみ出現) */
+html.enh .enh-mode-btn {
+  position: absolute;
+  z-index: 5;
+  right: 16px;
+  bottom: 16px;
+  display: none;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+html.enh .enh-missile-on .enh-mode-btn { display: block; }
+html.enh .enh-interactive .enh-mode-btn {
+  background: rgba(200, 40, 40, 0.75);
+  border-color: rgba(255, 120, 120, 0.9);
+}
