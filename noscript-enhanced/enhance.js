@@ -15,6 +15,9 @@
 (function () {
   'use strict';
 
+  // デプロイごとに更新するバージョン(キャッシュバスティング/HUD表示用)
+  var ENH_VERSION = '20260705a';
+
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
   var top = document.getElementById('top');
@@ -100,7 +103,8 @@
       var f = dbg.ifr || {};
       var st = f.stat || {};
       hud.textContent =
-        'scrollY:' + Math.round(window.pageYOffset) +
+        'v:' + ENH_VERSION +
+        ' scrollY:' + Math.round(window.pageYOffset) +
         ' pS1:' + dbg.pS1.toFixed(2) + ' mOp:' + dbg.mOp.toFixed(2) +
         ' PE:' + (missileFrame ? missileFrame.style.pointerEvents : '-') +
         '\n親: relay受信:' + dbg.relay + ' lastDy:' + dbg.lastDy +
@@ -119,7 +123,7 @@
     if (missileFrame) return;
     missileFrame = document.createElement('iframe');
     missileFrame.className = 'enh-missile';
-    missileFrame.src = 'missile.html' + (DEBUG ? '?debug=1' : '');
+    missileFrame.src = 'missile.html?v=' + ENH_VERSION + (DEBUG ? '&debug=1' : '');
     missileFrame.setAttribute('frameborder', '0');
     missileFrame.setAttribute('title', 'ミサイル演出');
     missileFrame.style.opacity = '0';
