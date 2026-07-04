@@ -16,7 +16,7 @@
   'use strict';
 
   // デプロイごとに更新するバージョン(キャッシュバスティング/HUD表示用)
-  var ENH_VERSION = '20260705a';
+  var ENH_VERSION = '20260705b';
 
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
@@ -99,6 +99,20 @@
     hud = document.createElement('div');
     hud.className = 'enh-debug-hud';
     document.body.appendChild(hud);
+    // ページ全域の受動計測(preventDefault等は一切しない・観測のみ)。
+    // フリーズ時に「指は動いているのにスクロールが1pxも動かない」を数値で確定させる
+    dbg.gTm = 0; dbg.gMove = 0; dbg.gScroll = 0;
+    var gY = 0, gScrollY = 0;
+    document.addEventListener('touchstart', function (e) {
+      if (e.touches[0]) { gY = e.touches[0].clientY; gScrollY = window.pageYOffset; }
+    }, { passive: true, capture: true });
+    document.addEventListener('touchmove', function (e) {
+      dbg.gTm++;
+      if (e.touches[0]) {
+        dbg.gMove = Math.round(gY - e.touches[0].clientY);
+        dbg.gScroll = Math.round(window.pageYOffset - gScrollY);
+      }
+    }, { passive: true, capture: true });
     setInterval(function () {
       var f = dbg.ifr || {};
       var st = f.stat || {};
@@ -113,6 +127,7 @@
         ' iH:' + window.innerHeight +
         ' stageEnd:' + Math.round(stage.offsetTop + stage.offsetHeight) +
         ' WD:' + dbg.wd + ' カメラ:' + (dbg.bg ? 'ON' : 'off') +
+        '\n全域: 移動:' + dbg.gTm + '回 直近指:' + dbg.gMove + 'px 直近scroll:' + dbg.gScroll + 'px' +
         '\niframe: ts:' + (st.ts || 0) + ' tm:' + (st.tm || 0) + ' pd:' + (st.pd || 0) +
         ' te:' + (st.te || 0) + ' relay送信:' + (st.relay || 0) + ' raf:' + (st.raf || 0) +
         '\nactive:' + f.active + ' ox:' + f.ox + ' oy:' + f.oy;
@@ -191,13 +206,9 @@
   function onMissileScroll(deltaY) {
     if (typeof deltaY !== 'number' || !isFinite(deltaY)) return;
     var dy = Math.max(-600, Math.min(600, deltaY));
-    // 'instant' は Safari の一部で未知の列挙値として TypeError になるため使わない。
-    // 代わりに html の scroll-behavior:smooth を一瞬だけ無効化して即時スクロール。
-    var rootStyle = document.documentElement.style;
-    var prev = rootStyle.scrollBehavior;
-    rootStyle.scrollBehavior = 'auto';
+    // scroll-behavior は enhance.css で auto に固定済み(smooth + タッチ中の
+    // プログラムスクロールは iOS のスクロール死を招くため)
     window.scrollBy(0, dy);
-    rootStyle.scrollBehavior = prev;
     dbg.relay++;
     dbg.lastDy = Math.round(dy);
   }

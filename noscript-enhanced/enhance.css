@@ -17,6 +17,15 @@ html.enh body {
   overscroll-behavior-x: none;
 }
 
+/* smooth スクロール無効化(重要):
+   iOS Safari は「scroll-behavior:smooth + タッチ操作中のプログラム的 scrollBy
+   (ミサイルの縦限界→ページスクロール中継)」の組み合わせでスクロール機構が
+   ラッチし、以後タッチスクロール全体が死ぬ。フリーズは毎回中継使用後に発生
+   していた(実機HUDで確認)。フル版は smooth 不使用で安定していた */
+html.enh {
+  scroll-behavior: auto !important;
+}
+
 /* ---------- ステージ骨格 ---------- */
 
 html.enh .enh-stage {
