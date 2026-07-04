@@ -83,10 +83,14 @@
   /* ---------- ミサイル iframe(遅延挿入・常時操作ON) ---------- */
 
   var missileFrame = null;
+  var touchLayer = null;
+  // タッチ端末では iframe のヒットテストを使わない(iOS の PE キャッシュバグ回避)
+  var TOUCH_DEVICE = window.matchMedia('(pointer: coarse)').matches ||
+    ('ontouchstart' in window) || /forcetouch=1/.test(location.search);
 
   // デバッグHUD: URL に ?debug=1 を付けると実機の内部状態を画面に表示する
   var DEBUG = /[?&]debug=1/.test(location.search);
-  var dbg = { relay: 0, lastDy: 0, pS1: 0, mOp: 0, ifr: null };
+  var dbg = { relay: 0, lastDy: 0, pS1: 0, mOp: 0, fw: 0, ifr: null };
   var hud = null;
   if (DEBUG) {
     hud = document.createElement('div');
@@ -100,6 +104,7 @@
         ' pS1:' + dbg.pS1.toFixed(2) + ' mOp:' + dbg.mOp.toFixed(2) +
         ' PE:' + (missileFrame ? missileFrame.style.pointerEvents : '-') +
         '\n親: relay受信:' + dbg.relay + ' lastDy:' + dbg.lastDy +
+        ' 注入:' + dbg.fw + ' touch層:' + (touchLayer ? touchLayer.style.pointerEvents : '-') +
         '\niframe: ts:' + (st.ts || 0) + ' tm:' + (st.tm || 0) + ' pd:' + (st.pd || 0) +
         ' te:' + (st.te || 0) + ' relay送信:' + (st.relay || 0) + ' raf:' + (st.raf || 0) +
         '\nactive:' + f.active + ' ox:' + f.ox + ' oy:' + f.oy;
@@ -116,6 +121,30 @@
     missileFrame.style.opacity = '0';
     missileFrame.style.pointerEvents = 'none';
     sticky.insertBefore(missileFrame, s1Inner);
+
+    if (TOUCH_DEVICE) {
+      // 親側の透明タッチ層。受けたタッチを missile.html へ関数呼び出しで注入する
+      touchLayer = document.createElement('div');
+      touchLayer.className = 'enh-touch-layer';
+      touchLayer.style.pointerEvents = 'none';
+      sticky.appendChild(touchLayer);
+      var send = function (fn, t) {
+        var w = missileFrame && missileFrame.contentWindow;
+        if (w && w.__missileInput) { w.__missileInput[fn](t.clientX, t.clientY); dbg.fw++; }
+      };
+      touchLayer.addEventListener('touchstart', function (e) {
+        if (e.touches[0]) send('down', e.touches[0]);
+      }, { passive: true });
+      touchLayer.addEventListener('touchmove', function (e) {
+        // ミサイル操作を優先(縦限界時のページスクロールは missile.html からの
+        // postMessage 中継で行われる)
+        if (e.cancelable) e.preventDefault();
+        if (e.touches[0]) send('move', e.touches[0]);
+      }, { passive: false });
+      touchLayer.addEventListener('touchend', function (e) {
+        if (e.changedTouches[0]) send('up', e.changedTouches[0]);
+      }, { passive: true });
+    }
   }
 
   // スクロール中継ブリッジ: missile.html は照準が縦限界に達すると
@@ -207,8 +236,13 @@
     dbg.mOp = mOp;
     if (missileFrame) {
       missileFrame.style.opacity = mOp;
-      // 表示され始めたらタッチ/クリックを iframe に渡す(フル版と同じ opacity>0.1 基準)
-      missileFrame.style.pointerEvents = (mOp > 0.1) ? 'auto' : 'none';
+      var live = mOp > 0.1;
+      if (TOUCH_DEVICE) {
+        // iOS: iframe の PE は none のまま固定し、親側タッチ層で入力を受ける
+        if (touchLayer) touchLayer.style.pointerEvents = live ? 'auto' : 'none';
+      } else {
+        missileFrame.style.pointerEvents = live ? 'auto' : 'none';
+      }
     }
     caption.style.opacity = mOp;
   }

@@ -230,3 +230,13 @@ html.enh .enh-debug-hud {
   pointer-events: none;
   border-radius: 6px;
 }
+
+/* 親側タッチ層(タッチ端末のみ JS が生成。iframe のヒットテストを使わず
+   ここで受けたタッチを missile.html に注入する) */
+html.enh .enh-touch-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  touch-action: none;
+  background: transparent;
+}

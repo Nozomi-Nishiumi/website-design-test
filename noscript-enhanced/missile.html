@@ -481,6 +481,15 @@
     }
   }
 
+  // 親ページからの入力注入口(iOS Safari は動的に pointer-events を変えた
+  // iframe へのタッチ配送を更新しないため、タッチは親側の透明レイヤーで受け、
+  // 同一オリジンの関数呼び出しでここに注入する)
+  window.__missileInput = {
+    down: function(x, y){ onDown({touches:[{clientX:x, clientY:y}]}); },
+    move: function(x, y){ onMove({touches:[{clientX:x, clientY:y}], cancelable:false}); },
+    up:   function(x, y){ onUp({changedTouches:[{clientX:x, clientY:y}]}); }
+  };
+
   cv.addEventListener('touchstart', onDown, {passive:true});
   cv.addEventListener('touchmove',  onMove, {passive:false});
   cv.addEventListener('touchend',   onUp,   {passive:true});
