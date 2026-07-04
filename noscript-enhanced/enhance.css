@@ -1,25 +1,55 @@
 /* ==========================================================================
-   enhance.css — noscript版への漸進強化スタイル(トップ+セクション1のみ)
+   enhance.css — noscript版への漸進強化スタイル(統合ステージ方式)
    すべて html.enh 配下 = enhance.js が有効化した時のみ適用。
    JS が動かなければこのファイルは何もせず、noscript 版がそのまま表示される。
+
+   ステージ構成:
+     .enh-stage(相対配置・全長 460vh)
+       ├ .enh-stage-sticky(sticky 100vh) … 全演出レイヤーはこの1枚の中
+       ├ #top(160vh の高さ確保マーカー)
+       └ #section-1(200vh の高さ確保マーカー兼ナビ用アンカー)
    ========================================================================== */
 
-/* ---------- ヒーロー(トップ): sticky ステージ ---------- */
-
-html.enh #top {
-  height: 260vh;
-  position: relative;
+/* 横パン・横ラバーバンドの保険(フル版で実証済みの対策の移植) */
+html.enh,
+html.enh body {
+  overflow-x: clip;
+  overscroll-behavior-x: none;
 }
 
-html.enh .enh-hero-sticky {
-  position: sticky;
-  top: 0;
-  height: 100vh;
-  overflow: clip; /* 拡大タイルのはみ出しをここで閉じ込める(横パン防止) */
+/* ---------- ステージ骨格 ---------- */
+
+html.enh .enh-stage {
+  position: relative;
   background: #000;
 }
 
-html.enh #top .section-inner {
+html.enh .enh-stage-sticky {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: clip; /* 拡大タイルのはみ出しをここで閉じ込める */
+  background: #000;
+}
+
+/* 高さ確保マーカー(中身は sticky へ移設済み) */
+html.enh #top {
+  height: 160vh;
+  padding: 0;
+  margin: 0;
+}
+html.enh #section-1 {
+  height: 200vh;
+  min-height: 0;
+  padding: 0 !important;
+  margin: 0;
+  background: none !important;
+}
+html.enh #section-1::before { display: none; }
+
+/* ---------- ヒーロー層 ---------- */
+
+html.enh .enh-hero-inner {
   position: absolute;
   inset: 0;
   max-width: none;
@@ -28,7 +58,7 @@ html.enh #top .section-inner {
 }
 
 /* タイルグリッド(フル演出版の12カラム構成を再現) */
-html.enh #top .top-grid {
+html.enh .enh-hero-inner .top-grid {
   position: absolute;
   inset: 0;
   margin: 0;
@@ -40,38 +70,47 @@ html.enh #top .top-grid {
   padding: 72px 20px 20px; /* ヘッダー分を空ける */
 }
 
-html.enh #top .top-grid .img-wrap {
+html.enh .enh-hero-inner .top-grid .img-wrap {
   aspect-ratio: auto;
   border-radius: 8px;
   will-change: transform, opacity;
 }
 
 /* 写真1(pigeon)=8/12幅・写真2=4/12幅・写真3〜6=各3/12幅 */
-html.enh #top .top-grid .img-wrap:nth-child(1) { grid-column: span 8; z-index: 2; }
-html.enh #top .top-grid .img-wrap:nth-child(2) { grid-column: span 4; }
-html.enh #top .top-grid .img-wrap:nth-child(n+3) { grid-column: span 3; }
+html.enh .enh-hero-inner .top-grid .img-wrap:nth-child(1) { grid-column: span 8; z-index: 2; }
+html.enh .enh-hero-inner .top-grid .img-wrap:nth-child(2) { grid-column: span 4; }
+html.enh .enh-hero-inner .top-grid .img-wrap:nth-child(n+3) { grid-column: span 3; }
 
-/* 拡大中は hover ズームとリンククリックを無効化 */
-html.enh #top .top-grid .img-wrap:hover img { transform: none; }
-html.enh #top .top-grid.enh-no-click a { pointer-events: none; }
+/* 拡大が始まったら hover ズームとリンククリックを無効化 */
+html.enh .enh-hero-inner .top-grid .img-wrap:hover img { transform: none; }
+html.enh .enh-hero-inner .top-grid.enh-no-click a { pointer-events: none; }
 
 @media (max-width: 600px) {
-  html.enh #top .top-grid {
+  html.enh .enh-hero-inner .top-grid {
     grid-template-columns: repeat(2, 1fr);
     grid-template-rows: repeat(3, 1fr);
     gap: 10px;
     padding: 64px 12px 12px;
   }
-  html.enh #top .top-grid .img-wrap:nth-child(n+1) { grid-column: span 1; }
+  html.enh .enh-hero-inner .top-grid .img-wrap:nth-child(n+1) { grid-column: span 1; }
 }
 
-/* 暗色グラデーションオーバーレイ(フル版 hero-overlay-dynamic 相当) */
-html.enh .enh-hero-overlay {
+/* 明るさ遷移オーバーレイ:
+   A = ヒーロー用グラデ / B = セクション1用の一様0.65(フル版と同じ暗さ)。
+   JS が拡大完了に合わせて A→B をクロスフェードし、明るさの段差を無くす */
+html.enh .enh-overlay-hero,
+html.enh .enh-overlay-s1 {
   position: absolute;
   inset: 0;
   z-index: 3;
   pointer-events: none;
+}
+html.enh .enh-overlay-hero {
   background: linear-gradient(180deg, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0.65) 100%);
+}
+html.enh .enh-overlay-s1 {
+  background: rgba(0, 0, 0, 0.65);
+  opacity: 0;
 }
 
 /* タイトル・サブタイトルのオーバーレイ配置 */
@@ -100,7 +139,7 @@ html.enh .enh-hero-text .university-line {
 /* スクロールインジケーター */
 html.enh .enh-scroll-indicator {
   position: absolute;
-  z-index: 4;
+  z-index: 8;
   bottom: 18px;
   left: 50%;
   color: #fff;
@@ -117,52 +156,28 @@ html.enh .enh-hero-started .enh-scroll-indicator { opacity: 0; }
   50% { transform: translate(-50%, 6px); }
 }
 
-/* ---------- セクション1: sticky ステージ ---------- */
+/* ---------- セクション1層(背景は拡大済みタイルがそのまま担う) ---------- */
 
-html.enh #section-1 {
-  height: 300vh;
-  padding: 0 !important;
-  background-image: none !important; /* 背景は sticky 側で表示 */
-}
-html.enh #section-1::before { display: none; } /* 素の暗幕は sticky 側に移設 */
-
-html.enh .enh-s1-sticky {
-  position: sticky;
-  top: 0;
-  height: 100vh;
-  overflow: clip;
-  background-image: url('images/pigeon.png'); /* ヒーローで拡大した写真1と連続 */
-  background-size: cover;
-  background-position: center;
-}
-html.enh .enh-s1-sticky::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  background: rgba(0, 0, 0, 0.65); /* フル版と同じ暗さ */
-}
-
-/* ミサイル演出 iframe(背景の上・テキストの下) */
+/* ミサイル演出 iframe(常時操作ON。pointer-events は JS が表示度に応じて切替) */
 html.enh .enh-missile {
   position: absolute;
   inset: 0;
-  z-index: 2;
+  z-index: 5;
   width: 100%;
   height: 100%;
   border: 0;
-  pointer-events: none; /* 通常時はスクロールを一切妨げない */
 }
 
 /* テキスト(JS が opacity / translateY を駆動) */
-html.enh #section-1 .section-inner {
+html.enh .enh-s1-inner {
   position: absolute;
-  z-index: 3;
+  z-index: 6;
   left: 0;
   right: 0;
   top: 16vh;
   margin: 0 auto;
   width: min(88%, 960px);
+  max-width: 960px;
   opacity: 0;
   pointer-events: none;
   animation: none; /* 素の .fade-in(view() 連動)は無効化して JS 制御に一本化 */
@@ -171,7 +186,7 @@ html.enh #section-1 .section-inner {
 /* ミサイル演出キャプション */
 html.enh .enh-missile-caption {
   position: absolute;
-  z-index: 4;
+  z-index: 7;
   right: 24px;
   bottom: 72px;
   text-align: right;
@@ -190,27 +205,4 @@ html.enh .enh-cap-text {
   font-size: 12px;
   color: #fff;
   text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
-}
-
-/* 演出操作の切替ボタン(ミサイル表示中のみ出現) */
-html.enh .enh-mode-btn {
-  position: absolute;
-  z-index: 5;
-  right: 16px;
-  bottom: 16px;
-  display: none;
-  padding: 10px 16px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  background: rgba(0, 0, 0, 0.45);
-  color: #fff;
-  font-size: 13px;
-  cursor: pointer;
-  -webkit-backdrop-filter: blur(4px);
-  backdrop-filter: blur(4px);
-}
-html.enh .enh-missile-on .enh-mode-btn { display: block; }
-html.enh .enh-interactive .enh-mode-btn {
-  background: rgba(200, 40, 40, 0.75);
-  border-color: rgba(255, 120, 120, 0.9);
 }
