@@ -159,12 +159,16 @@ html.enh .enh-hero-text .top-hero-sub {
   top: 100%;
   left: 0;
   right: 0;
-  margin-top: 60px;
+  margin-top: 25px; /* main: gap 15px + タイトル margin-bottom 10px */
+  padding: 15px 20px;
 }
 html.enh .enh-hero-text .scatter-title {
-  font-size: clamp(1.9rem, 5vw, 4.2rem);
+  /* mainフル版のJS自動フィット再現(base側 styles_noscript.css と同じ実測除数) */
+  font-size: calc((100vw - 120px) / 20.35);
   line-height: 1.15;
   letter-spacing: 0.01em;
+  padding: 15px 20px;
+  box-sizing: border-box;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
 }
 
@@ -180,9 +184,8 @@ html.enh .enh-hero-text .university-line {
   text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7);
 }
 @media (max-width: 600px) {
-  html.enh .enh-hero-text { left: 20px; right: 20px; top: 50%; }
-  html.enh .enh-hero-text .top-hero-sub { margin-top: 48px; }
-  html.enh .enh-hero-text .subtitle-ja { font-size: 15px; }
+  html.enh .enh-hero-text { top: 50%; } /* left/right 40px は main と同じく全幅共通 */
+  html.enh .enh-hero-text .subtitle-ja,
   html.enh .enh-hero-text .university-line { font-size: 14px; }
 }
 

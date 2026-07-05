@@ -4,7 +4,7 @@
     }
     body {
       margin: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", sans-serif;
+      font-family: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Yu Gothic', 'Meiryo', sans-serif; /* mainフル版と同一 */
       line-height: 1.6;
       color: #111;
       background: #000;
@@ -966,15 +966,21 @@ html:not(.enh) #top::after {
   top: 100%;
   left: 0;
   right: 0;
-  margin-top: 60px; /* フル版のタイトル→研究室名の視覚間隔(約70px)に一致 */
+  margin-top: 25px; /* main: gap 15px + タイトル margin-bottom 10px */
+  padding: 15px 20px; /* main の .hero-description と同じ */
 }
 
 #top .scatter-title {
-  font-size: clamp(30px, 5.2vw, 92px);
+  /* mainフル版のJS自動フィット(2行目「ANIMAL BEHAVIOURAL STRATEGIES」が
+     幅いっぱいに収まる最大サイズ)のCSS再現。除数はこのマークアップの
+     glyph幅/フォントサイズ比の実測値(Hiragino角ゴ Bold+字間1%) */
+  font-size: calc((100vw - 120px) / 20.35);
   line-height: 1.15;
   letter-spacing: 0.01em; /* フル版JSの自動調整(フォントの1%)と同じ比率 */
   font-weight: 700;
-  margin: 0; /* 箱=タイトルそのものにして中央合わせを厳密に(間隔はsub側で確保) */
+  padding: 15px 20px; /* main の .hero-title-dynamic と同じ(非表示枠線の箱) */
+  margin: 0;
+  box-sizing: border-box;
   color: #fff;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
 }
@@ -995,7 +1001,7 @@ html:not(.enh) #top::after {
   display: inline;
   font-size: 18px;
   letter-spacing: 2px;
-  margin: 0 1.25em 0 0;
+  margin: 0;
   color: #fff;
 }
 
@@ -1027,22 +1033,11 @@ html:not(.enh) #top::after {
   #top .top-grid .img-wrap:nth-child(6) { grid-column: 3 / 5; grid-row: 10 / 13; }
 
   #top .top-hero-text {
-    left: 20px;
-    right: 20px;
-  }
-
-  #top .top-hero-text {
     top: 50%; /* スマホのフル版はタイトル中心=50vh */
   }
 
-  #top .top-hero-sub {
-    margin-top: 48px;
-  }
-
-  #top .scatter-title {
-    font-size: clamp(26px, 8vw, 44px);
-  }
-
-  #top .subtitle-ja { font-size: 15px; }
+  /* タイトルのフォント式・left/right 40px は全幅共通(mainと同じ)。
+     説明行のみ main のモバイル指定(14px)に合わせる */
+  #top .subtitle-ja,
   #top .university-line { font-size: 14px; }
 }
