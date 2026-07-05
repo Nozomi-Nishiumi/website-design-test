@@ -144,9 +144,22 @@ html.enh .enh-hero-text {
   z-index: 4;
   left: 40px;
   right: 40px;
-  top: 50%;
+  top: calc(50% + 40px); /* フル版のタイトル中央線: calc(40px + 50vh) */
   transform: translateY(-50%);
   pointer-events: none;
+}
+
+/* base と同じ: 箱の中身はタイトルのみ。研究室名の行は直下にぶら下げ、
+   translateY(-50%) がタイトル中心=中央線になるようにする */
+html.enh .enh-hero-text .scatter-title {
+  margin: 0;
+}
+html.enh .enh-hero-text .top-hero-sub {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 60px;
 }
 html.enh .enh-hero-text .scatter-title {
   font-size: clamp(1.9rem, 5vw, 4.2rem);
@@ -167,7 +180,8 @@ html.enh .enh-hero-text .university-line {
   text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7);
 }
 @media (max-width: 600px) {
-  html.enh .enh-hero-text { left: 20px; right: 20px; }
+  html.enh .enh-hero-text { left: 20px; right: 20px; top: 50%; }
+  html.enh .enh-hero-text .top-hero-sub { margin-top: 48px; }
   html.enh .enh-hero-text .subtitle-ja { font-size: 15px; }
   html.enh .enh-hero-text .university-line { font-size: 14px; }
 }

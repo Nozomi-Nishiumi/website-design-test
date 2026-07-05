@@ -951,11 +951,22 @@ html:not(.enh) #top::after {
   position: absolute;
   left: 40px;
   right: 40px;
-  top: calc(50% + 40px); /* フル版 hero-content-dynamic: calc(40px + 50vh) と同じ */
+  top: calc(50% + 40px); /* フル版のタイトル中央線: calc(40px + 50vh) */
   transform: translateY(-50%);
   z-index: 3;
   color: #fff;
   pointer-events: none; /* 背後のタイルリンクを操作可能に保つ */
+}
+
+/* フル版は「英語タイトルの中心」を中央線に合わせる(JSで実施)。
+   CSSで同じ結果にするため、アンカー箱の中身はタイトルのみとし、
+   研究室名の行は箱の直下に絶対配置でぶら下げる */
+#top .top-hero-sub {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 60px; /* フル版のタイトル→研究室名の視覚間隔(約70px)に一致 */
 }
 
 #top .scatter-title {
@@ -963,7 +974,7 @@ html:not(.enh) #top::after {
   line-height: 1.15;
   letter-spacing: 0.01em; /* フル版JSの自動調整(フォントの1%)と同じ比率 */
   font-weight: 700;
-  margin: 0 0 12px;
+  margin: 0; /* 箱=タイトルそのものにして中央合わせを厳密に(間隔はsub側で確保) */
   color: #fff;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
 }
@@ -1022,6 +1033,10 @@ html:not(.enh) #top::after {
 
   #top .top-hero-text {
     top: 50%; /* スマホのフル版はタイトル中心=50vh */
+  }
+
+  #top .top-hero-sub {
+    margin-top: 48px;
   }
 
   #top .scatter-title {
