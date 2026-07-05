@@ -94,11 +94,6 @@ a img {
 
 @media (max-width: 768px) {
 
-    #top .top-grid {
-    margin-top: -16rem !important;   /* ← これで見切れ完全解消 */
-    opacity: 1;      /* ← 背景扱いじゃないなら戻す */
-  }
-
 
 
 
@@ -301,21 +296,8 @@ a img {
   }
 }
 
-#top {
-  position: relative;
-}
-
-#top .top-grid {
-  margin-top: -22rem; /* ←重なり量は調整 */
-  position: relative;
-  z-index: 1;
-  opacity: 0.50; /* ← 背景として薄く見せる */
-}
-
-#top .section-inner > *:not(.top-grid) {
-  position: relative;
-  z-index: 2;
-}
+/* #top のヒーローレイアウトはファイル末尾の
+   「トップ(ヒーロー): フル演出版レイアウト」ブロックで定義 */
 
 /* 画像の共通スタイル */
 
@@ -895,3 +877,160 @@ summary:hover {
   }
 }
 
+
+/* ==========================================================================
+   トップ(ヒーロー): フル演出版レイアウトの再現
+   - タイルグリッドを全画面配置(PC: 12列×2行 / スマホ: 4列×12行)
+   - 研究室名ブロックはグリッドの上に重ねて左端・上下中央に配置
+   - 配色・暗さはフル版の hero-overlay-dynamic と同じグラデーション
+   ========================================================================== */
+
+/* ヘッダーは sticky で通常フローに高さを持つため、#top を負マージンで
+   ページ最上端まで引き上げ、ヒーローを画面全体(100vh)にする */
+#top {
+  position: relative;
+  height: 100vh;
+  height: 100svh; /* モバイルのアドレスバー分を除いた実表示域 */
+  margin-top: calc(-1 * var(--top-header-h, 96px));
+  padding: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+:root {
+  --top-header-h: 96px; /* sticky ヘッダーの高さ(実測ベース。下の media で上書き) */
+}
+
+#top .section-inner {
+  position: absolute;
+  inset: 0;
+  max-width: none;
+  margin: 0;
+}
+
+/* --- タイルグリッド: フル版と同じ 12列×2行(PC) --- */
+#top .top-grid {
+  position: absolute;
+  top: var(--top-header-h, 96px); /* ナビの下から開始(フル版 top:80px 相当) */
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 15px;
+  padding: 20px;
+  opacity: 1;
+  z-index: 1;
+}
+
+#top .top-grid .img-wrap {
+  aspect-ratio: auto; /* グリッド行がサイズを決める(共通の比率指定を打ち消し) */
+  border-radius: 8px;
+}
+
+/* 写真1(pigeon)=8/12幅・写真2=4/12幅・写真3〜6=各3/12幅 */
+#top .top-grid .img-wrap:nth-child(1) { grid-column: span 8; grid-row: span 1; }
+#top .top-grid .img-wrap:nth-child(2) { grid-column: span 4; grid-row: span 1; }
+#top .top-grid .img-wrap:nth-child(n+3) { grid-column: span 3; grid-row: span 1; }
+
+/* --- 暗さのグラデーション(フル版 hero-overlay-dynamic と同一) --- */
+html:not(.enh) #top::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0.65) 100%);
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* --- 研究室名ブロック: 左端・上下中央のオーバーレイ(フル版と同配置) --- */
+#top .top-hero-text {
+  position: absolute;
+  left: 40px;
+  right: 40px;
+  top: calc(50% + 40px); /* フル版 hero-content-dynamic: calc(40px + 50vh) と同じ */
+  transform: translateY(-50%);
+  z-index: 3;
+  color: #fff;
+  pointer-events: none; /* 背後のタイルリンクを操作可能に保つ */
+}
+
+#top .scatter-title {
+  font-size: clamp(30px, 5.2vw, 92px);
+  line-height: 1.15;
+  letter-spacing: 0.01em; /* フル版JSの自動調整(フォントの1%)と同じ比率 */
+  font-weight: 700;
+  margin: 0 0 12px;
+  color: #fff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+
+/* 単語間は実スペースに任せる(共通の margin 0.5em は二重の隙間になり
+   「ANIMAL BEHAVIOURAL STRATEGIES」が1行に収まらない) */
+#top .scatter-title .word {
+  margin-right: 0;
+}
+
+/* 研究室名と所属: フル版 hero-description と同じ「1行の連続テキストが
+   画面幅に応じて自然に折り返す」インライン方式 */
+.top-hero-sub {
+  display: block;
+}
+
+#top .subtitle-ja {
+  display: inline;
+  font-size: 18px;
+  letter-spacing: 2px;
+  margin: 0 1.25em 0 0;
+  color: #fff;
+}
+
+#top .university-line {
+  display: inline;
+  font-size: 18px; /* フル版 hero-description と同じ */
+  letter-spacing: 2px;
+  margin: 0;
+  color: #fff;
+}
+
+/* --- スマホ: フル版の 4列×12行 配置(上半分に大2枚、下半分に2×2) --- */
+@media (max-width: 768px) {
+  :root {
+    --top-header-h: 88px;
+  }
+
+  #top .top-grid {
+    top: 0; /* フル版同様、グリッドは透明ナビの背後まで広がる */
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(12, 1fr);
+    gap: 10px;
+    padding: 10px;
+  }
+
+  /* 写真1: 左上(上半分の左) / 写真2: 右上(上半分の右) */
+  #top .top-grid .img-wrap:nth-child(1) { grid-column: 1 / 3; grid-row: 1 / 7; }
+  #top .top-grid .img-wrap:nth-child(2) { grid-column: 3 / 5; grid-row: 1 / 7; }
+  /* 写真3〜6: 下半分に 2×2 */
+  #top .top-grid .img-wrap:nth-child(3) { grid-column: 1 / 3; grid-row: 7 / 10; }
+  #top .top-grid .img-wrap:nth-child(4) { grid-column: 3 / 5; grid-row: 7 / 10; }
+  #top .top-grid .img-wrap:nth-child(5) { grid-column: 1 / 3; grid-row: 10 / 13; }
+  #top .top-grid .img-wrap:nth-child(6) { grid-column: 3 / 5; grid-row: 10 / 13; }
+
+  #top .top-hero-text {
+    left: 20px;
+    right: 20px;
+  }
+
+  #top .top-hero-text {
+    top: 50%; /* スマホのフル版はタイトル中心=50vh */
+  }
+
+  #top .scatter-title {
+    font-size: clamp(26px, 8vw, 44px);
+  }
+
+  #top .subtitle-ja { font-size: 15px; }
+  #top .university-line { font-size: 14px; }
+}

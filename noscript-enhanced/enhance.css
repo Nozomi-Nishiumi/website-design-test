@@ -113,7 +113,7 @@ html.enh .enh-hero-inner .top-grid.enh-no-click a { pointer-events: none; }
 @media (max-width: 600px) {
   html.enh .enh-hero-inner .top-grid {
     grid-template-columns: repeat(2, 1fr);
-    grid-template-rows: repeat(3, 1fr);
+    grid-template-rows: 2fr 1fr 1fr; /* フル版: 上段2枚が高さ半分、下に2×2 */
     gap: 10px;
     padding: 64px 12px 12px;
   }
@@ -150,15 +150,26 @@ html.enh .enh-hero-text {
 }
 html.enh .enh-hero-text .scatter-title {
   font-size: clamp(1.9rem, 5vw, 4.2rem);
+  line-height: 1.15;
+  letter-spacing: 0.01em;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+
+/* 単語間は実スペースに任せる(共通の 0.5em では2行に収まらない) */
+html.enh .enh-hero-text .scatter-title .word {
+  margin-right: 0;
 }
 html.enh .enh-hero-text .subtitle-ja,
 html.enh .enh-hero-text .university-line {
-  color: #f0f0f0;
+  font-size: 18px;
+  letter-spacing: 2px;
+  color: #fff;
   text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7);
 }
 @media (max-width: 600px) {
   html.enh .enh-hero-text { left: 20px; right: 20px; }
+  html.enh .enh-hero-text .subtitle-ja { font-size: 15px; }
+  html.enh .enh-hero-text .university-line { font-size: 14px; }
 }
 
 /* スクロールインジケーター */
