@@ -975,7 +975,12 @@ html:not(.enh) #top::after {
      幅いっぱいに収まる最大サイズ)のCSS再現。除数はこのマークアップの
      glyph幅/フォントサイズ比の実測値(Hiragino角ゴ Bold+字間1%) */
   font-size: calc((100vw - 120px) / 20.35);
-  line-height: 1.15;
+  /* 行送り = タイル行間(15px) + 大文字インク高さ(実測0.80em)。
+     タイトル2行のインク端がタイル端にちょうど接し、黒い区切りに
+     文字が重ならない(行間はビューポート寸法から幾何的に決まる) */
+  line-height: calc(16px + 0.8em);
+  position: relative;
+  top: 0.044em; /* 大文字はベースライン上に偏るため、インク中心を区切り中心へ補正 */
   letter-spacing: 0.01em; /* フル版JSの自動調整(フォントの1%)と同じ比率 */
   font-weight: 700;
   padding: 15px 20px; /* main の .hero-title-dynamic と同じ(非表示枠線の箱) */
@@ -1034,6 +1039,12 @@ html:not(.enh) #top::after {
 
   #top .top-hero-text {
     top: 50%; /* スマホのフル版はタイトル中心=50vh */
+  }
+
+  /* スマホはタイル行間が10px */
+  #top .scatter-title {
+    line-height: calc(10px + 0.8em);
+    top: calc(0.044em + 1px);
   }
 
   /* タイトルのフォント式・left/right 40px は全幅共通(mainと同じ)。
