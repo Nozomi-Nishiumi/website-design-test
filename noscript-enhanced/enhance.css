@@ -92,7 +92,7 @@ html.enh .enh-hero-inner .top-grid {
   grid-template-columns: repeat(12, 1fr);
   grid-template-rows: repeat(2, 1fr);
   gap: 15px;
-  padding: 72px 20px 20px; /* ヘッダー分を空ける */
+  padding: 80px 20px 20px; /* 固定ナビ(実測76px)の下から。baseの --top-header-h と一致 */
 }
 
 html.enh .enh-hero-inner .top-grid .img-wrap {
@@ -115,7 +115,7 @@ html.enh .enh-hero-inner .top-grid.enh-no-click a { pointer-events: none; }
     grid-template-columns: repeat(2, 1fr);
     grid-template-rows: 2fr 1fr 1fr; /* フル版: 上段2枚が高さ半分、下に2×2 */
     gap: 10px;
-    padding: 64px 12px 12px;
+    padding: 12px; /* ヘッダー行の撤去に伴い上詰め(baseと同じ) */
   }
   html.enh .enh-hero-inner .top-grid .img-wrap:nth-child(n+1) { grid-column: span 1; }
 }

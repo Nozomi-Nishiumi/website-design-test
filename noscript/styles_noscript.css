@@ -11,12 +11,14 @@
     }
 
     header {
-      position: sticky;
+      /* fixed でフローから外し、ヒーローをページ最上端から 100svh きっかりに
+         確保する(sticky だとヘッダー高さぶんタイル下端が見切れる) */
+      position: fixed;
       top: 0;
+      left: 0;
+      right: 0;
       z-index: 10;
       background: transparent;
-      backdrop-filter: none; /* ← blur も不要なら消す */
-
       color: #fff;
     }
 
@@ -773,8 +775,8 @@ section.parallax-section {
 
 
 /* 各背景の画像 */
-.img-section-01 { background-image: url('images/pigeon.png');}
-.img-section-02 { background-image: url('images/experiment1.png');}
+.img-section-01 { background-image: url('images/pigeon.jpg');}
+.img-section-02 { background-image: url('images/experiment1.jpg');}
 .img-section-03 { background-image: url('images/snake_frog.jpg');}
 .img-section-04 { background-image: url('images/trajectory.jpg');}
 .img-section-05 { background-image: url('images/dive.jpg');}
@@ -891,14 +893,13 @@ summary:hover {
   position: relative;
   height: 100vh;
   height: 100svh; /* モバイルのアドレスバー分を除いた実表示域 */
-  margin-top: calc(-1 * var(--top-header-h, 96px));
   padding: 0;
   overflow: hidden;
   box-sizing: border-box;
 }
 
 :root {
-  --top-header-h: 96px; /* sticky ヘッダーの高さ(実測ベース。下の media で上書き) */
+  --top-header-h: 80px; /* 固定ナビ(実測76px)の下からグリッド開始(フル版 top:80px と同じ) */
 }
 
 #top .section-inner {
@@ -997,10 +998,6 @@ html:not(.enh) #top::after {
 
 /* --- スマホ: フル版の 4列×12行 配置(上半分に大2枚、下半分に2×2) --- */
 @media (max-width: 768px) {
-  :root {
-    --top-header-h: 88px;
-  }
-
   #top .top-grid {
     top: 0; /* フル版同様、グリッドは透明ナビの背後まで広がる */
     grid-template-columns: repeat(4, 1fr);
