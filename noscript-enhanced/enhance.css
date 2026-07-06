@@ -193,41 +193,6 @@ html.enh .enh-hero-text .university-line {
   text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7);
 }
 
-/* --- 日本語ブロック(JAページ): base 側と同じく下段右端タイル(3/12)に一致 ---
-   強化版グリッドは padding 100px 20px 20px / gap 15px なので横方向の
-   タイル幅・右端は base と同一(W=(100vw-85px)/4、右端=100vw-20px) */
-html.enh .enh-hero-text .top-hero-sub.hero-sub-ja {
-  left: auto;
-  right: -20px;
-  width: calc((100vw - 85px) / 4);
-  padding: 0;
-}
-html.enh .enh-hero-text .hero-sub-ja p {
-  margin: 0;
-  color: #fff;
-  letter-spacing: 0;
-  line-height: 1.45;
-  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7);
-}
-html.enh .enh-hero-text .ja-name {
-  font-size: calc((100vw - 85px) / 36.6); /* W ÷ 9文字 ÷ 1.015 */
-  text-align: justify;
-  text-align-last: justify;
-}
-html.enh .enh-hero-text .ja-univ {
-  font-size: calc((100vw - 85px) / 44.8); /* W ÷ 11文字 ÷ 1.015 */
-  text-align: justify;
-  text-align-last: justify;
-}
-html.enh .enh-hero-text .ja-dept {
-  font-size: calc((100vw - 85px) / 44.8);
-  text-indent: calc((100vw - 85px) / 11); /* W × 4/11 = 「新潟大学」の直後 */
-}
-html.enh .enh-hero-text .ja-pi {
-  font-size: calc((100vw - 85px) / 44.8);
-  text-align: right;
-}
-
 @media (max-width: 600px) {
   html.enh .enh-hero-text { top: 50%; } /* left/right 40px は main と同じく全幅共通 */
   html.enh .enh-hero-text .scatter-title {
@@ -236,20 +201,6 @@ html.enh .enh-hero-text .ja-pi {
   }
   html.enh .enh-hero-text .subtitle-ja,
   html.enh .enh-hero-text .university-line { font-size: 14px; }
-
-  /* 日本語ブロック: 強化版スマホグリッド(2列/gap10/padding左右12)の右列タイル
-     W = (100vw - 34px) / 2、右端 = 100vw - 12px */
-  html.enh .enh-hero-text .top-hero-sub.hero-sub-ja {
-    right: -28px; /* コンテナ右端(100vw-40px)→タイル右端(100vw-12px) */
-    width: calc((100vw - 34px) / 2);
-  }
-  html.enh .enh-hero-text .ja-name { font-size: calc((100vw - 34px) / 18.3); }
-  html.enh .enh-hero-text .ja-univ { font-size: calc((100vw - 34px) / 22.4); }
-  html.enh .enh-hero-text .ja-dept {
-    font-size: calc((100vw - 34px) / 22.4);
-    text-indent: calc((100vw - 34px) / 5.5); /* W × 4/11 */
-  }
-  html.enh .enh-hero-text .ja-pi { font-size: calc((100vw - 34px) / 22.4); }
 }
 
 /* スクロールインジケーター */

@@ -7,8 +7,8 @@
 
   <link rel="stylesheet" href="styles_noscript.css" type="text/css">
   <!-- 漸進強化: JSが無効ならこの2行は無害で、noscript版がそのまま表示される -->
-  <link rel="stylesheet" href="enhance.css?v=20260707a" type="text/css">
-  <script src="enhance.js?v=20260707a" defer></script>
+  <link rel="stylesheet" href="enhance.css?v=20260707b" type="text/css">
+  <script src="enhance.js?v=20260707b" defer></script>
 </head>
 <body>
 
@@ -64,11 +64,10 @@
           </span>
         </h1>
 
-        <div class="top-hero-sub hero-sub-ja">
-          <p class="ja-name">動物行動戦略研究室</p>
-          <p class="ja-univ">新潟大学自然科学研究科</p>
-          <p class="ja-dept">創生学部</p>
-          <p class="ja-pi">代表教員　西海望</p>
+        <!-- main と同じ1行の連続テキスト。折り返し点は全角スペースのみ
+             (no-break の2塊は途中で改行しない) -->
+        <div class="top-hero-sub">
+          <span class="subtitle-ja">動物行動戦略研究室</span>　<span class="university-line"><span class="no-break">新潟大学大学院自然科学研究科/創生学部</span>　　<span class="no-break">代表教員　西海 望</span></span>
         </div>
       </div>
 
