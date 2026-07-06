@@ -980,7 +980,9 @@ html:not(.enh) #top::after {
      文字が重ならない(行間はビューポート寸法から幾何的に決まる) */
   line-height: calc(16px + 0.8em);
   position: relative;
-  top: 0.044em; /* 大文字はベースライン上に偏るため、インク中心を区切り中心へ補正 */
+  /* インク中心の補正から1px上げ、AA・オーバーシュートの黒帯への滲みを防ぐ
+     (DPR2ピクセル実測でタイル端に一致) */
+  top: calc(0.044em - 1px);
   letter-spacing: 0.01em; /* フル版JSの自動調整(フォントの1%)と同じ比率 */
   font-weight: 700;
   padding: 15px 20px; /* main の .hero-title-dynamic と同じ(非表示枠線の箱) */
@@ -1044,7 +1046,7 @@ html:not(.enh) #top::after {
   /* スマホはタイル行間が10px */
   #top .scatter-title {
     line-height: calc(10px + 0.8em);
-    top: calc(0.044em + 1px);
+    top: 0.044em; /* PCと同様、AA滲みが黒帯に入らない位置(DPR2実測) */
   }
 
   /* タイトルのフォント式・left/right 40px は全幅共通(mainと同じ)。

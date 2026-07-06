@@ -16,7 +16,7 @@
   'use strict';
 
   // デプロイごとに更新するバージョン(キャッシュバスティング/HUD表示用)
-  var ENH_VERSION = '20260705j';
+  var ENH_VERSION = '20260706a';
 
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 

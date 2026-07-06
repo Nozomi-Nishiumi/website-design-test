@@ -172,7 +172,9 @@ html.enh .enh-hero-text .scatter-title {
   /* 行送り=タイル行間(15px)+大文字インク高さ(0.8em)。文字端がタイル端に接する */
   line-height: calc(16px + 0.8em);
   position: relative;
-  top: 0.044em; /* インク中心を区切り中心へ補正 */
+  /* インク中心を区切り中心へ補正し、さらに1px上げてAA・オーバーシュートの
+     黒帯への滲み出しを防ぐ(DPR2ピクセル実測でタイル端に一致) */
+  top: calc(0.044em - 1px);
   letter-spacing: 0.01em;
   padding: 15px 20px;
   box-sizing: border-box;
@@ -194,7 +196,7 @@ html.enh .enh-hero-text .university-line {
   html.enh .enh-hero-text { top: 50%; } /* left/right 40px は main と同じく全幅共通 */
   html.enh .enh-hero-text .scatter-title {
     line-height: calc(10px + 0.8em); /* スマホのタイル行間は10px */
-    top: calc(0.044em + 1px);
+    top: 0.044em; /* PCと同様、AA滲みが黒帯に入らない位置(DPR2実測) */
   }
   html.enh .enh-hero-text .subtitle-ja,
   html.enh .enh-hero-text .university-line { font-size: 14px; }
