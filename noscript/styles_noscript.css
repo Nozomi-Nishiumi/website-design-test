@@ -978,7 +978,7 @@ html:not(.enh) #top::after {
   /* 行送り = タイル行間(15px) + 大文字インク高さ(実測0.80em)。
      タイトル2行のインク端がタイル端にちょうど接し、黒い区切りに
      文字が重ならない(行間はビューポート寸法から幾何的に決まる) */
-  line-height: calc(16px + 0.8em);
+  line-height: calc(21px + 0.8em); /* タイル行間15px+ブラウザ差吸収の安全マージン(Safariはインクが約2px低い) */
   position: relative;
   /* インク中心の補正から1px上げ、AA・オーバーシュートの黒帯への滲みを防ぐ
      (DPR2ピクセル実測でタイル端に一致) */
@@ -1045,7 +1045,7 @@ html:not(.enh) #top::after {
 
   /* スマホはタイル行間が10px */
   #top .scatter-title {
-    line-height: calc(10px + 0.8em);
+    line-height: calc(15px + 0.8em); /* タイル行間10px+ブラウザ差吸収の安全マージン */
     top: 0.044em; /* PCと同様、AA滲みが黒帯に入らない位置(DPR2実測) */
   }
 
