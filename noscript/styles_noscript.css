@@ -1020,6 +1020,48 @@ html:not(.enh) #top::after {
   color: #fff;
 }
 
+/* --- 日本語ブロック(JAページ): 下段右端タイル(3/12幅)に左右を一致させる ---
+   タイル幅 W = 3列 + 2gap = (100vw - 85px) / 4
+   (列幅 = (100vw - padding40 - gap165)/12、右端 = 100vw - 20px)
+   フォントサイズは「N文字でWぴったり」から1.5%小さくして折り返しを防ぎ、
+   text-align-last: justify が残り幅を字間に配って両端をタイル端に固定する */
+#top .top-hero-sub.hero-sub-ja {
+  left: auto;
+  right: -20px; /* コンテナ右端(100vw-40px)→タイル右端(100vw-20px) */
+  width: calc((100vw - 85px) / 4);
+  padding: 0;
+}
+
+#top .hero-sub-ja p {
+  margin: 0;
+  color: #fff;
+  letter-spacing: 0; /* 幅計算の前提(字間は justify が受け持つ) */
+  line-height: 1.45;
+}
+
+#top .ja-name {
+  font-size: calc((100vw - 85px) / 36.6); /* W ÷ 9文字 ÷ 1.015 */
+  text-align: justify;
+  text-align-last: justify;
+}
+
+#top .ja-univ {
+  font-size: calc((100vw - 85px) / 44.8); /* W ÷ 11文字 ÷ 1.015 */
+  text-align: justify;
+  text-align-last: justify;
+}
+
+#top .ja-dept {
+  font-size: calc((100vw - 85px) / 44.8);
+  /* 「新潟大学」4文字分 = 両端揃え後の字割り W × 4/11 の位置に頭を合わせる */
+  text-indent: calc((100vw - 85px) / 11);
+}
+
+#top .ja-pi {
+  font-size: calc((100vw - 85px) / 44.8);
+  text-align: right; /* タイル右端に詰める */
+}
+
 /* --- スマホ: フル版の 4列×12行 配置(上半分に大2枚、下半分に2×2) --- */
 @media (max-width: 768px) {
   #top .top-grid {
@@ -1053,4 +1095,18 @@ html:not(.enh) #top::after {
      説明行のみ main のモバイル指定(14px)に合わせる */
   #top .subtitle-ja,
   #top .university-line { font-size: 14px; }
+
+  /* 日本語ブロック: スマホの右列タイル(2/4幅)に一致
+     W = 2列 + 1gap = (100vw - 30px) / 2、右端 = 100vw - 10px */
+  #top .top-hero-sub.hero-sub-ja {
+    right: -30px; /* コンテナ右端(100vw-40px)→タイル右端(100vw-10px) */
+    width: calc((100vw - 30px) / 2);
+  }
+  #top .ja-name { font-size: calc((100vw - 30px) / 18.3); }
+  #top .ja-univ { font-size: calc((100vw - 30px) / 22.4); }
+  #top .ja-dept {
+    font-size: calc((100vw - 30px) / 22.4);
+    text-indent: calc((100vw - 30px) / 5.5); /* W × 4/11 */
+  }
+  #top .ja-pi { font-size: calc((100vw - 30px) / 22.4); }
 }
