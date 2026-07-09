@@ -778,8 +778,8 @@ section.parallax-section {
 .img-section-01 { background-image: url('images/pigeon.jpg');}
 .img-section-02 { background-image: url('images/experiment1.jpg');}
 .img-section-03 { background-image: url('images/snake_frog.jpg');}
-.img-section-04 { background-image: url('images/trajectory.jpg');}
-.img-section-05 { background-image: url('images/dive.jpg');}
+.img-section-04 { background-image: url('images/dive.jpg');}
+.img-section-05 { background-image: url('images/trajectory.jpg');}
 .img-section-06 { background-image: url('images/zd-coding-ebook.jpg');}
 
 
@@ -881,6 +881,62 @@ summary:hover {
   .two-column iframe {
     height: 200px;
   }
+}
+
+/* --- セクション3: YouTube独自サムネイル(クリックで再生) --- */
+.video-thumb {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 6px;
+}
+.video-thumb a {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.two-column .video-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* クリック後に差し込まれる再生用iframe(汎用の高さ300px指定を上書き) */
+.two-column .video-thumb iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+/* --- セクション4: 研究室への参加の小見出し(フル版の下線＋字下げ本文) --- */
+.join-heading {
+  font-size: 1em;
+  font-weight: bold;
+  text-decoration: underline;
+  margin: 1.4em 0 0.4em;
+}
+.text-block .join-body {
+  padding-left: 2em;
+}
+@media (max-width: 768px) {
+  .text-block .join-body {
+    padding-left: 1em;
+  }
+}
+
+/* --- セクション5: 空欄セクション(背景画像のみ) --- */
+.empty-section {
+  min-height: 60vh;
+}
+
+/* --- セクション6: 交流会バナー --- */
+.banner-link {
+  display: block;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.contact-extra {
+  margin-top: 2.5rem;
 }
 
 

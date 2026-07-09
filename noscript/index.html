@@ -5,7 +5,7 @@
   <title>LABORATORY OF ANIMAL BEHAVIOURAL STRATEGIES</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <link rel="stylesheet" href="styles_noscript.css?v=20260707c" type="text/css">
+  <link rel="stylesheet" href="styles_noscript.css?v=20260709a" type="text/css">
 </head>
 <body>
 
@@ -21,8 +21,8 @@
   <div class="nav-links">
     <a href="#section-1">研究室の目的</a>
     <a href="#section-2">研究アプローチ</a>
-    <a href="#section-3">研究成果</a>
-    <a href="#section-4">プロジェクト</a>
+    <a href="#section-3">研究内容</a>
+    <a href="#section-4">研究体制</a>
     <a href="#section-5">研究室への参加</a>
     <a href="#section-6">コンタクト</a>
   </div>
@@ -72,8 +72,8 @@
   <a href="#section-1" class="img-wrap"><img src="images/pigeon.jpg" alt=""></a>
   <a href="#section-2" class="img-wrap"><img src="images/experiment1.jpg" alt=""></a>
   <a href="#section-3" class="img-wrap"><img src="images/snake_frog.jpg" alt=""></a>
-  <a href="#section-4" class="img-wrap"><img src="images/trajectory.jpg" alt=""></a>
-  <a href="#section-5" class="img-wrap"><img src="images/dive.jpg" alt=""></a>
+  <a href="#section-4" class="img-wrap"><img src="images/dive.jpg" alt=""></a>
+  <a href="#section-5" class="img-wrap"><img src="images/trajectory.jpg" alt=""></a>
   <a href="#section-6" class="img-wrap"><img src="images/zd-coding-ebook.jpg" alt=""></a>
 </div>
     </div>
@@ -217,11 +217,11 @@
     </div>
   </section>
 
-  <!-- 研究成果 -->
+  <!-- 研究内容（研究業績＋プロジェクト） -->
   <section id="section-3" class="parallax-section img-section-03">
-    
+
     <div class="section-inner fade-in">
-      <h2 class="section-title">研究成果</h2>
+      <h2 class="section-title">研究内容</h2>
       <div class="two-column">
       <div class="col">
         <!-- 左側：テキストなど -->
@@ -240,21 +240,15 @@
       </div>
     </div>
     <div class="col">
-      <!-- YouTube動画埋め込み -->
-      <iframe width="560" height="315" src="https://www.youtube.com/embed/jdOTK1WARvU?si=XGTfW-Jw3pudrt1N" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
-
-      <!-- youtube -->
+      <!-- 独自サムネイル: クリックでその場再生。JS無効時はリンクとして
+           YouTube を新しいタブで開く(iframe を初期状態で読み込まない分軽い) -->
+      <div class="video-thumb">
+        <a href="https://www.youtube.com/watch?v=jdOTK1WARvU" target="_blank" rel="noopener noreferrer" aria-label="受賞記念講演の動画を再生" onclick="var f=document.createElement('iframe');f.src='https://www.youtube.com/embed/jdOTK1WARvU?rel=0&amp;modestbranding=1&amp;autoplay=1';f.title='YouTube video player';f.setAttribute('frameborder','0');f.setAttribute('allow','accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');f.setAttribute('referrerpolicy','strict-origin-when-cross-origin');f.setAttribute('allowfullscreen','');this.parentNode.replaceChild(f,this);return false;">
+          <img src="images/yt_thumbnail.jpg" alt="受賞記念講演の動画サムネイル">
+        </a>
       </div>
       </div>
-    </div>
-  </section>
-
-  <!-- プロジェクト -->
-  
-  <section id="section-4" class="parallax-section img-section-04">
-    <div class="section-inner fade-in">
-      <h2 class="section-title">プロジェクト</h2>
-
+      </div>
 
         <div class="projects-list">
         <details>
@@ -290,51 +284,65 @@
     </div>
   </section>
 
-  <!-- 研究室への参加 -->
-  
-  <section id="section-5" class="parallax-section img-section-05">
-    
+  <!-- 研究体制 -->
+  <section id="section-4" class="parallax-section img-section-04">
     <div class="section-inner fade-in">
-      <h2 class="section-title">研究室への参加</h2>
+      <h2 class="section-title">研究体制</h2>
+
+      <div class="two-column">
+        <div class="col">
+          <div class="text-block">
+            <p>
+              本研究室は2025年度からスタートしました。
+              現在、スタッフの増員と研究スペースの拡張を進めています。
+            </p>
+            <p>
+              本研究室の研究テーマを進めるには、生き物への関心とコンピュータスキルの他、
+              戦略性を探る経済学的な思考センス、スポーツなどで培った勝負勘といった
+              様々な方面の力を結集させることが重要です。
+              多様な背景をもつ人々が集まり、力を合わせることで、
+              行動学の新たな地平を切り拓けるものと信じています。
+            </p>
+          </div>
+        </div>
+        <div class="col">
+          <img src="images/member.png" alt="ラボメンバー">
+        </div>
+      </div>
 
       <div class="text-block">
+        <h3>■研究室への参加</h3>
         <p>
           当研究室では、研究に参加してくれる大学院生を募集しています。
           また、日本学術振興会の特別研究員の受け入れや博士研究員の雇用にも積極的です。
         </p>
-        <h3>■学振特別研究員受け入れ</h3>
-        <p>
+        <h4 class="join-heading">学振特別研究員受け入れ</h4>
+        <p class="join-body">
           申請計画の検討にあたって相談に乗ります。
           また、申請期限間近の受け入れ打診であっても対応可能な場合がありますので、
           気軽にご連絡ください。
         </p>
-        <h3>■博士研究員雇用</h3>
-        <p>
+        <h4 class="join-heading">博士研究員雇用</h4>
+        <p class="join-body">
           主体的に研究が可能な方で、コンピュータスキルに長けた方を募集します。
           詳しくは近日公開予定の J-Rec in の公募情報をご参照ください。
         </p>
-        <h3>■大学院生受け入れ</h3>
-        <p>
-          本研究室で研究を行いたい方は是非一度研究室見学をするようにしてください。
+        <h4 class="join-heading">大学院生受け入れ</h4>
+        <p class="join-body">
           研究テーマが明確に定まっていなくても構いませんので、
-          どんなことがやりたいか、何に興味を持てそうかなどをお聞かせいただければと思います。
-        </p>
-
-        <p>
+          どんなことがやりたいか、何に興味を持てそうかなどをお聞かせいただければと思います。<br>
           本研究室は新潟大学自然科学研究科に属しています。
-          大学院入試の要項についても目を通しておくことを勧めます。
+          大学院入試の要項についても目を通しておくことを勧めます。<br>
+          本研究室の代表教員はJST創発的研究支援事業に採択されているため、
+          大学院生を年間最大240万円で雇用できる場合があります。
         </p>
-
-        <p>
-          本研究室の代表教員（西海）はJST創発的研究支援事業に採択されているため、
-          大学院生には最大で年額240万円の生活支援が可能な場合があります。
-        </p>
-
-
       </div>
-
-     
     </div>
+  </section>
+
+  <!-- （空欄セクション：背景のみ） -->
+  <section id="section-5" class="parallax-section img-section-05 empty-section">
+    <div class="section-inner"></div>
   </section>
 
   <!-- コンタクト -->
@@ -361,9 +369,41 @@
        width="600" height="450" style="border:1;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
       </div>
     </div>
-      
+
+      <div class="text-block contact-extra">
+        <h3>■来訪時、ご自身の研究のプレゼンをしてくださる方へ</h3>
+        <p>
+          ご訪問の際、非公開または学内限定の小規模セミナーの場を設けることができます。
+          また、学生の来訪者に対しては交通費の支給が可能な場合があります。
+          ご希望の方はメールでその旨をお伝えください。
+        </p>
+      </div>
+
+      <div class="text-block contact-extra">
+        <h3>■交流会イベント</h3>
+        <div class="two-column">
+          <div class="col">
+            <p>
+              行動学研究をテーマとして研究会活動を行っています。
+              その取り組みの一環として、講演会の後に研究者や学生だけでなく、
+              研究とは直接関わっていない方々も交えて歓談する無料の交流会を
+              毎月オンラインで開催しています。
+              本研究室のことだけでなく、参加する他の研究者や、
+              様々な生物、研究分野を知る良い機会になるかと思います。<br>
+              オンラインツール：MetaLife<br>
+              時間帯：20:00-21:00
+            </p>
+          </div>
+          <div class="col">
+            <a href="https://sites.google.com/view/behavioral-biology/seminar" target="_blank" rel="noopener noreferrer" class="banner-link">
+              <img src="images/banner.jpg" alt="交流会イベントバナー">
+            </a>
+          </div>
+        </div>
+      </div>
+
     </div>
-   
+
   </section>
 
 </main>
