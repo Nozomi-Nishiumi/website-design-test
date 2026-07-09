@@ -748,7 +748,7 @@ section.parallax-section {
 
 @media (max-width: 768px) {
   .parallax-section {
-    background-attachment: scroll; /* ← fixed を切る（必須） */
+    background-attachment: scroll; /* ← iOSはfixed非対応(下の::afterで再現) */
     overflow: visible;             /* ← これが重なりを解消する */
     padding: 80px 20px;            /* ← スマホ用に高さを安定 */
   }
@@ -788,6 +788,46 @@ section.parallax-section {
 .parallax-section > * {
   position: relative;
   z-index: 2;
+}
+
+/* --- スマホでもパララックスを再現 ---
+   iOS Safari は background-attachment: fixed を無視するため、
+   セクションを clip-path で「窓」にし、その中に position:fixed の
+   背景レイヤー(::after)を置いて同じ見た目を実現する。
+   ::after(z:-1) → 暗幕::before(z:1) → 本文(z:2) の順に重なる */
+@media (max-width: 768px) {
+  .parallax-section {
+    clip-path: inset(0); /* fixedレイヤーをセクション範囲に閉じ込める */
+    background-image: none; /* 背景は::after側に移す(下のurl指定を上書き) */
+  }
+
+  .parallax-section::after {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 100vh;
+    height: 100lvh; /* アドレスバー最小時も下端まで覆う */
+    background-position: center;
+    background-size: cover;
+    background-repeat: no-repeat;
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  .img-section-01::after { background-image: url('images/pigeon.jpg'); }
+  .img-section-02::after { background-image: url('images/experiment1.jpg'); }
+  .img-section-03::after { background-image: url('images/snake_frog.jpg'); }
+  .img-section-04::after { background-image: url('images/dive.jpg'); }
+  .img-section-05::after { background-image: url('images/trajectory.jpg'); }
+  .img-section-06::after { background-image: url('images/zd-coding-ebook.jpg'); }
+
+  /* 強化版では #section-1 は高さマーカー化される(bg:none)ので
+     固定背景レイヤーも出さない */
+  html.enh #section-1::after {
+    display: none;
+  }
 }
 
 
