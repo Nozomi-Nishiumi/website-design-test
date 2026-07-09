@@ -863,7 +863,11 @@ summary:hover {
 }
 
 /* 画像やiframeを綺麗に表示 */
-.two-column img,
+.two-column img {
+  width: 100%;
+  height: auto; /* 固定300pxだと横長画像が縦に伸びる(アスペクト比維持) */
+  display: block;
+}
 .two-column iframe {
   width: 100%;
   height: 300px;
