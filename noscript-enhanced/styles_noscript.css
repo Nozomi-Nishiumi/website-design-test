@@ -894,6 +894,12 @@ summary:hover {
   flex: 1;
 }
 
+/* ブラウザ標準の iframe 枠線(2px inset)を全面的に無効化
+   (Googleマップ等の縁にグレー/白の線が出るのを防ぐ) */
+iframe {
+  border: 0;
+}
+
 /* 画像やiframeを綺麗に表示 */
 .two-column img {
   width: 100%;
