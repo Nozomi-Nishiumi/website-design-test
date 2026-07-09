@@ -5,7 +5,7 @@
   <title>LABORATORY OF ANIMAL BEHAVIOURAL STRATEGIES</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <link rel="stylesheet" href="styles_noscript.css?v=20260710a" type="text/css">
+  <link rel="stylesheet" href="styles_noscript.css?v=20260710b" type="text/css">
   <!-- 漸進強化: JSが無効ならこの2行は無害で、noscript版がそのまま表示される -->
   <link rel="stylesheet" href="enhance.css?v=20260707b" type="text/css">
   <script src="enhance.js?v=20260707b" defer></script>
@@ -20,6 +20,9 @@
   <label for="nav-toggle" class="nav-toggle-label">
     <span></span>
   </label>
+
+  <!-- メニュー外タップで閉じるための透明レイヤー(展開時のみ表示) -->
+  <label for="nav-toggle" class="nav-backdrop" aria-hidden="true"></label>
 
   <div class="nav-links">
     <a href="#section-1">研究室の目的</a>
@@ -103,25 +106,6 @@
   <section id="section-2" class="parallax-section img-section-02">
     <div class="section-inner fade-in">
       <h2 class="section-title">研究アプローチ</h2>
-<div class="two-column">
-  <div class="col">
-    <h3>■研究の特色</h3>
-      <div class="text-block">
-        
-        <p>
-          本研究室の強みは、一般的な行動学研究環境に加え、
-          実証研究と理論研究をつなぐ独自の実験基盤を有していることにあります。
-          これは、仮想の動物と現実の動物とが相互作用するサイバーフィジカルシステムであり、
-          実際には起こり得ない理論上の行動や相互作用シナリオを擬似的に再現させる技術になります。
-        </p>
-      </div>
-      </div>
-
-
-<div class="col">
-      <img src="anime/exp_all.png" alt="">
-</div>
-</div>
 
       <h3>■研究展開の方面</h3>
 
@@ -208,14 +192,24 @@
     </div>
   </div>
 
-  
 </div>
 
+<div class="two-column">
+  <div class="col">
+    <h3>■研究の特色</h3>
+      <div class="text-block">
+        <p>
+          本研究室の強みは、一般的な行動学研究環境に加え、
+          実証研究と理論研究をつなぐ独自の実験基盤を有していることにあります。
+          これは、仮想の動物と現実の動物とが相互作用するサイバーフィジカルシステムであり、
+          実際には起こり得ない理論上の行動や相互作用シナリオを擬似的に再現させる技術になります。
+        </p>
+      </div>
+  </div>
 
-
- 
-
-
+  <div class="col">
+      <img src="anime/exp_all.png" alt="">
+  </div>
 </div>
     </div>
   </section>
@@ -255,7 +249,7 @@
 
         <div class="projects-list">
         <details>
-          <summary><h3>■進行中の主要研究プロジェクト</h3></summary>
+          <summary><h3>進行中の主要研究プロジェクト</h3></summary>
             <ul>
               <li><span class="year">2025-2032</span> JST 創発的研究支援事業（代表）「動物用メタバースによる横断的行動学研究」</li>
               <li><span class="year">2025-2028</span> JSPS 科研費 基盤研究B（代表）「捕食者と被食者のマルチタスク対処能力から探る生物集団形成の進化的要因」</li>
@@ -265,7 +259,7 @@
           </details>
         
         <details>
-          <summary><h3>■終了した主要研究プロジェクト（代表のみ抜粋）</h3></summary>
+          <summary><h3>終了した主要研究プロジェクト（代表のみ抜粋）</h3></summary>
           <ul>
             <li><span class="year">2024-2024</span> 学術変革領域（A）「階層的生物ナビ学」 国際活動支援班 海外派遣助成金「ハトの行動学実験に向けたVR映像提示技術の開発」</li>
             <li><span class="year">2022-2025</span> JSPS 科研費 特別研究員奨励費「コウモリに対する猛禽類の追跡ナビゲーション戦略：ロボット技術を用いたアプローチ」</li>
@@ -348,29 +342,24 @@
     <div class="section-inner fade-in">
       <h2 class="section-title">ゼミ/ラボ教育</h2>
 
-      <div class="two-column">
-        <div class="col">
-          <div class="text-block">
-            <p>
-              本研究室配属の大学院生と学部生には、人を含む様々な生き物の行動や意思決定の仕組み、
-              合理性を探る取り組みに従事していただきます。
-            </p>
-          </div>
-        </div>
-        <div class="col">
-          <img src="images/seminar_illust.svg" alt="分岐する軌跡の先へ飛ぶ紙飛行機のラインイラスト">
-        </div>
-      </div>
-
-      <div class="text-block">
+      <!-- 図は右にfloatさせ、本文が回り込むことで空白を作らない -->
+      <div class="text-block seminar-block">
+        <img src="images/seminar_diagram.svg" alt="研究活動を通じて磨かれる力の概念図" class="seminar-diagram">
         <p>
-          研究テーマそのものは、きっと生物学や運動/スポーツ科学、コンピュータサイエンスに関するものが中心となり、
+          本研究室配属の大学院生と学部生には、人を含む様々な生き物を対象に、
+          行動や意思決定のパターンと合理性、運動や身体制御のパフォーマンスなどを
+          探る取り組みに従事していただきます。
+        </p>
+        <p>
+          研究テーマそのものは、きっと行動生物学や人間行動科学、コンピュータサイエンス、
+          およびその応用分野（スポーツ、害獣対策など）に関するものが中心となり、
           そこで学生各自の専門性を培うことになるでしょう。
-          しかし、研究室での教育はこうした特定分野の専門性や技術に習熟することだけを趣旨とするわけでは必ずしもありません。
-          実験や観察で得られた情報から、現象の背景にどのような仕組みが存在しているかを推理すること、
-          そこでは様々な解釈の可能性を見比べ、公正な姿勢で現象を捉える力が求められます。
-          また、難解な現象や理屈、自らのアイディアについて他者の理解を得るために、
-          様々な相手の視点に立って、難しい物事をうまく説明する力が求められます。
+          しかし、研究室での教育はこうした特定分野の専門性や技術に習熟することだけを趣旨とするわけではありません。
+          実験や観察で得られた現象の背景にどのような仕組みが存在しているのかを推理するには、
+          そこでは目先の事象を総合的／抽象的に捉えて論理を組む力が求められますし、
+          様々な解釈の可能性に思考を巡らせ、公正な姿勢で整理する力が求められます。
+          また、複雑な現象や理屈、自らのアイディア等について他者の理解を得るためには、
+          相手の視点に立って難解な物事をうまく説明する力が求められます。
           そして、限られた年限内に研究テーマを完遂するには、
           他者に依存せず自律的に取り組む力と、他者と連携する力の両方が重要です。
           また、自身のスタンスを固めずに、常に先進技術に臆せず適応していくとともに、
@@ -406,7 +395,7 @@
       </div>
 
       <div class="col">
-      <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d556.7950008774468!2d138.93976448043847!3d37.867118333169024!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x5ff4c70be7f4e521%3A0x71f6a2a1cb63e620!2z44CSOTUwLTIxMDIg5paw5r2f55yM5paw5r2f5biC6KW_5Yy65LqU5Y2B5bWQ77yS44Gu55S65aSn5a2m6Zmi6Ieq54S256eR5a2m56CU56m256eR5qOf!5e0!3m2!1sja!2sjp!4v1773729309934!5m2!1sja!2sjp"
+      <iframe class="map-dark" src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d556.7950008774468!2d138.93976448043847!3d37.867118333169024!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x5ff4c70be7f4e521%3A0x71f6a2a1cb63e620!2z44CSOTUwLTIxMDIg5paw5r2f55yM5paw5r2f5biC6KW_5Yy65LqU5Y2B5bWQ77yS44Gu55S65aSn5a2m6Zmi6Ieq54S256eR5a2m56CU56m256eR5qOf!5e0!3m2!1sja!2sjp!4v1773729309934!5m2!1sja!2sjp"
        width="600" height="450" style="border:1;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
       </div>
     </div>
