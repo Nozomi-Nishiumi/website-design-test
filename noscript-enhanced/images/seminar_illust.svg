@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" fill="none" role="img" aria-label="分岐する軌跡の先へ飛ぶ紙飛行機のラインイラスト">
+  <!-- 半透明の下地パネル: 写真背景から線画を浮き上がらせる -->
+  <rect x="1" y="1" width="638" height="478" rx="16" fill="rgba(8,14,20,0.6)" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+
+  <!-- 奥行き用の淡い同心円 -->
+  <circle cx="330" cy="245" r="205" stroke="rgba(255,255,255,0.06)" stroke-width="1.5"/>
+  <circle cx="330" cy="245" r="150" stroke="rgba(255,255,255,0.045)" stroke-width="1.5"/>
+
+  <!-- 主軌跡(点線): 左下から右上へ -->
+  <path d="M60 425 C 175 405, 255 345, 328 262 C 385 197, 445 145, 492 114"
+        stroke="rgba(255,255,255,0.8)" stroke-width="2.6"
+        stroke-dasharray="0.5 13" stroke-linecap="round"/>
+
+  <!-- 選ばれなかった分岐(淡い点線) -->
+  <path d="M328 262 C 316 212, 296 172, 258 134"
+        stroke="rgba(255,255,255,0.32)" stroke-width="2"
+        stroke-dasharray="0.5 12" stroke-linecap="round"/>
+  <circle cx="252" cy="127" r="5" stroke="rgba(255,255,255,0.4)" stroke-width="1.6"/>
+
+  <path d="M328 262 C 398 254, 458 260, 516 282"
+        stroke="rgba(255,255,255,0.32)" stroke-width="2"
+        stroke-dasharray="0.5 12" stroke-linecap="round"/>
+  <circle cx="523" cy="285" r="5" stroke="rgba(255,255,255,0.4)" stroke-width="1.6"/>
+
+  <!-- 分岐点(意思決定ノード): 暗い塗りで下の点線をマスクする -->
+  <circle cx="328" cy="262" r="12" fill="rgba(10,16,22,0.9)"/>
+  <circle cx="328" cy="262" r="6.5" stroke="rgba(100,220,200,0.95)" stroke-width="2.2"/>
+  <circle cx="328" cy="262" r="14" stroke="rgba(100,220,200,0.35)" stroke-width="1.6"/>
+
+  <!-- 出発点 -->
+  <circle cx="60" cy="425" r="4" fill="rgba(255,255,255,0.55)"/>
+
+  <!-- 紙飛行機(軌跡の先端・右上向き) -->
+  <g transform="translate(508,104) rotate(-33)">
+    <polygon points="0,0 -66,-15 -45,5" fill="rgba(255,255,255,0.92)"/>
+    <polygon points="0,0 -45,5 -57,25" fill="rgba(255,255,255,0.55)"/>
+    <line x1="0" y1="0" x2="-45" y2="5" stroke="rgba(120,150,160,0.6)" stroke-width="1"/>
+  </g>
+
+  <!-- 控えめな星屑 -->
+  <circle cx="142" cy="146" r="2" fill="rgba(255,255,255,0.4)"/>
+  <circle cx="428" cy="52" r="2" fill="rgba(255,255,255,0.35)"/>
+  <circle cx="560" cy="205" r="1.8" fill="rgba(255,255,255,0.3)"/>
+  <circle cx="94" cy="316" r="1.8" fill="rgba(255,255,255,0.3)"/>
+  <circle cx="242" cy="386" r="1.6" fill="rgba(255,255,255,0.25)"/>
+  <circle cx="480" cy="380" r="1.8" fill="rgba(255,255,255,0.25)"/>
+</svg>
