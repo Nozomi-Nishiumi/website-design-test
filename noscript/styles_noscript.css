@@ -924,8 +924,9 @@ summary:hover {
   }
 }
 
-/* --- セクション5: 空欄セクション(背景画像のみ) --- */
-.empty-section {
+/* --- セクション5: 空欄セクション(背景画像のみ) ---
+   section.parallax-section の min-height:auto より詳細度を上げる */
+section.parallax-section.empty-section {
   min-height: 60vh;
 }
 
