@@ -206,13 +206,15 @@ html.enh .enh-hero-text .university-line {
        除数はぴったり値20.35に約3%の安全率(Safariのグリフ幅差で
        折り返し・黒枠はみ出しが起きないように) */
     font-size: calc((100vw - 20px) / 21);
-    padding: 15px 10px; /* インク左端をタイル左端(10px)に合わせる */
+    /* 文字原点はタイル左端(10px)より3px内側(グリフAA/左ベアリングの
+       左滲み対策・実機IMG_0569実測)。右7pxで折返し余裕は維持 */
+    padding: 15px 7px 15px 13px;
     /* 黒帯クリアランス17px(タイル行間10px+上下3.5pxずつの余裕) */
     line-height: calc(17px + 0.8em);
     top: 0.044em; /* PCと同様、AA滲みが黒帯に入らない位置(DPR2実測) */
   }
   html.enh .enh-hero-text .top-hero-sub {
-    padding: 15px 10px;
+    padding: 15px 7px 15px 13px;
   }
   html.enh .enh-hero-text .subtitle-ja,
   html.enh .enh-hero-text .university-line { font-size: 14px; }
