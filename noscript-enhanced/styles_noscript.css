@@ -20,6 +20,15 @@
       z-index: 10;
       background: transparent;
       color: #fff;
+      /* 透明な全幅帯が下の操作(ミサイル演出等)を奪わないよう素通しにし、
+         リンク・ハンバーガー等の操作要素だけ受け付ける */
+      pointer-events: none;
+    }
+
+    header a,
+    header label,
+    header input {
+      pointer-events: auto;
     }
 
 .site-title {
@@ -881,7 +890,7 @@ details[open] summary {
 }
 
 summary:hover {
-  background-color: #99ff99;
+  background-color: rgba(196, 164, 100, 0.4); /* 薄い黄土色(白文字が読める半透明) */
 }
 
 /* 汎用2カラムレイアウト */
@@ -980,6 +989,24 @@ iframe {
   .text-block .join-body {
     padding-left: 1em;
   }
+}
+
+/* --- セクション4: リクルート(「公募中：」に職名リストをぶら下げる) --- */
+.recruit-block {
+  display: flex;
+  align-items: flex-start;
+}
+.recruit-label {
+  white-space: nowrap;
+  font-weight: bold;
+}
+.recruit-list {
+  margin: 0;
+  padding: 0;
+}
+.recruit-list li {
+  list-style: none;
+  margin: 0 0 0.4rem;
 }
 
 /* --- セクション5: ゼミ/ラボ教育のポンチ絵(本文が回り込む) --- */
