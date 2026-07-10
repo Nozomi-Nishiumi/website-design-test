@@ -747,10 +747,13 @@ section.parallax-section {
 }
 
 @media (max-width: 768px) {
-  .parallax-section {
+  /* section.parallax-section(PC用 100px 50px)より詳細度を落とさないこと。
+     以前 .parallax-section 単独指定だったため負けており、スマホでも
+     左右50pxの余白が出ていた */
+  section.parallax-section {
     background-attachment: scroll; /* ← iOSはfixed非対応(下の::afterで再現) */
     overflow: visible;             /* ← これが重なりを解消する */
-    padding: 80px 20px;            /* ← スマホ用に高さを安定 */
+    padding: 80px 16px;            /* ← スマホは左右の余白を詰める */
   }
 
   .parallax-section::before {
