@@ -113,13 +113,17 @@ html.enh .enh-hero-inner .top-grid .img-wrap:nth-child(n+3) { grid-column: span 
 html.enh .enh-hero-inner .top-grid .img-wrap:hover img { transform: none; }
 html.enh .enh-hero-inner .top-grid.enh-no-click a { pointer-events: none; }
 
-@media (max-width: 600px) {
+/* base(styles_noscript.css)のモバイル切替と同じ768px境界に統一。
+   以前は600pxだったため、600〜768pxの範囲でタイトルだけモバイル寸法・
+   グリッドはPC配置となり大きくずれていた */
+@media (max-width: 768px) {
   html.enh .enh-hero-inner .top-grid {
     grid-template-columns: repeat(2, 1fr);
     grid-template-rows: 2fr 1fr 1fr; /* フル版: 上段2枚が高さ半分、下に2×2 */
     gap: 10px;
-    /* 上padding-下padding=10px で区切り中心=50vh(タイトル中心と一致) */
-    padding: 22px 12px 12px;
+    /* 上padding-下padding=10px で区切り中心=50vh(タイトル中心と一致)。
+       左右はbase版のタイル端(10px)と統一 */
+    padding: 22px 10px 12px;
   }
   html.enh .enh-hero-inner .top-grid .img-wrap:nth-child(n+1) { grid-column: span 1; }
 }
@@ -206,15 +210,16 @@ html.enh .enh-hero-text .university-line {
        除数はぴったり値20.35に約3%の安全率(Safariのグリフ幅差で
        折り返し・黒枠はみ出しが起きないように) */
     font-size: calc((100vw - 20px) / 21);
-    /* 文字原点はタイル左端(10px)より3px内側(グリフAA/左ベアリングの
-       左滲み対策・実機IMG_0569実測)。右7pxで折返し余裕は維持 */
-    padding: 15px 7px 15px 13px;
+    padding: 15px 10px;
+    /* 中央揃え: 3%の安全率ぶんの余白が左右均等(各~5px)に分かれ、
+       グリフAAの滲みでもタイル外の黒枠に届かない */
+    text-align: center;
     /* 黒帯クリアランス17px(タイル行間10px+上下3.5pxずつの余裕) */
     line-height: calc(17px + 0.8em);
     top: 0.044em; /* PCと同様、AA滲みが黒帯に入らない位置(DPR2実測) */
   }
   html.enh .enh-hero-text .top-hero-sub {
-    padding: 15px 7px 15px 13px;
+    padding: 15px 12px;
   }
   html.enh .enh-hero-text .subtitle-ja,
   html.enh .enh-hero-text .university-line { font-size: 14px; }

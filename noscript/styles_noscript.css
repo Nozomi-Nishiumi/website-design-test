@@ -1193,19 +1193,19 @@ html:not(.enh) #top::after {
      余りは右側の余白になる) */
   #top .scatter-title {
     font-size: calc((100vw - 20px) / 21);
-    /* 文字原点はタイル左端(10px)より3px内側。欧文グリフ(A等)のAA・
-       左ベアリングが原点より約1px左に滲み、実機Safariで左の黒枠に
-       食い込んで見えるため(IMG_0569実測)。右は7pxで折返し余裕を維持 */
-    padding: 15px 7px 15px 13px;
+    padding: 15px 10px;
+    /* 中央揃え: 約3%の安全率ぶんの余白が左右均等(各~5px)に分かれ、
+       グリフAAの滲み(±1.5px)でもタイル外の黒枠には届かない */
+    text-align: center;
     /* 行送り=黒帯クリアランス17px+インク高さ。タイル行間10pxに対して
        上下3.5pxずつの余裕(Safariのインク位置ズレ1〜1.5px込みで安全) */
     line-height: calc(17px + 0.8em);
     top: 0.044em; /* PCと同様、AA滲みが黒帯に入らない位置(DPR2実測) */
   }
 
-  /* 説明行はタイトルと同じ左端に合わせ、main のモバイル指定(14px)にする */
+  /* 説明行はタイル左端(10px)より2px内側で main のモバイル指定(14px) */
   #top .top-hero-sub {
-    padding: 15px 7px 15px 13px;
+    padding: 15px 12px;
   }
   #top .subtitle-ja,
   #top .university-line { font-size: 14px; }
