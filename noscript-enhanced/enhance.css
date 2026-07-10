@@ -210,10 +210,14 @@ html.enh .enh-hero-text .university-line {
        除数はぴったり値20.35に約3%の安全率(Safariのグリフ幅差で
        折り返し・黒枠はみ出しが起きないように) */
     font-size: calc((100vw - 20px) / 21);
-    padding: 15px 10px;
-    /* 中央揃え: 3%の安全率ぶんの余白が左右均等(各~5px)に分かれ、
-       グリフAAの滲みでもタイル外の黒枠に届かない */
-    text-align: center;
+    /* 2行の左端を揃えた左寄せブロックを画面中央に配置。
+       「LABORATORY OF」右端は中央仕切りの~3px手前=左タイル内側に収まる */
+    width: max-content;
+    width: fit-content;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: left;
+    padding: 15px 0;
     /* 黒帯クリアランス17px(タイル行間10px+上下3.5pxずつの余裕) */
     line-height: calc(17px + 0.8em);
     top: 0.044em; /* PCと同様、AA滲みが黒帯に入らない位置(DPR2実測) */

@@ -1193,10 +1193,16 @@ html:not(.enh) #top::after {
      余りは右側の余白になる) */
   #top .scatter-title {
     font-size: calc((100vw - 20px) / 21);
-    padding: 15px 10px;
-    /* 中央揃え: 約3%の安全率ぶんの余白が左右均等(各~5px)に分かれ、
-       グリフAAの滲み(±1.5px)でもタイル外の黒枠には届かない */
-    text-align: center;
+    /* ブロック=2行の左端を揃えた左寄せ、ブロック全体を画面中央に配置。
+       実測(390px): 行頭16.7px(タイル内側・黒枠に出ない)、
+       「LABORATORY OF」右端186.7px=中央仕切り(190px)の3.3px手前で
+       左タイル内側にピッタリ収まる(3.3pxはSafariグリフ幅差の余裕) */
+    width: max-content;
+    width: fit-content;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: left;
+    padding: 15px 0;
     /* 行送り=黒帯クリアランス17px+インク高さ。タイル行間10pxに対して
        上下3.5pxずつの余裕(Safariのインク位置ズレ1〜1.5px込みで安全) */
     line-height: calc(17px + 0.8em);
