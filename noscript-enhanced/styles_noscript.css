@@ -78,6 +78,11 @@
   color: #fff;
 }
 
+/* 「トップ」はスマホのハンバーガーメニュー内だけに表示(PCナビには出さない) */
+.nav-top-only {
+  display: none;
+}
+
 a img {
   position: relative;
   z-index: 9999;
@@ -214,7 +219,12 @@ a img {
     padding: 0.75rem 0;
     border-bottom: none !important;
 
-    
+
+  }
+
+  /* スマホのハンバーガーメニューでは「トップ」を先頭に表示 */
+  .nav-top-only {
+    display: block;
   }
 }
 
