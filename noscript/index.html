@@ -5,11 +5,9 @@
   <title>LABORATORY OF ANIMAL BEHAVIOURAL STRATEGIES</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <link rel="stylesheet" href="styles_noscript.css?v=20260711e" type="text/css">
+  <link rel="stylesheet" href="styles_noscript.css?v=20260711f" type="text/css">
 </head>
 <body>
-<!-- ページ最上端アンカー(トップへ戻る用: #top は演出上マーカーで完全な先頭でないため) -->
-<a id="pagetop"></a>
 
 
 <header>
@@ -36,7 +34,10 @@
 
 </header>
 
-<main>
+<!-- id=pagetop はページ最上端(y=0)の実体ブロック。トップへ戻る/トップリンクの
+     確実なスクロール先(空アンカーだと Safari で飛ばないことがある)。
+     #top はヒーロー演出のマーカーで文書先頭とは限らないため使わない -->
+<main id="pagetop">
 
   <!-- トップ -->
   <section id="top">
