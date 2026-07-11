@@ -1057,6 +1057,37 @@ iframe {
   margin-top: 2.5rem;
 }
 
+/* メールアドレスの @ の代替記号(スパム避け): シアンで強調 */
+.at-mark {
+  color: #00e5ff;
+  font-weight: bold;
+}
+
+/* --- 常時表示のトップへ戻るボタン(右下固定) --- */
+.back-to-top {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 100;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff !important;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 50%;
+  text-decoration: none !important;
+  font-size: 1.4rem;
+  line-height: 1;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+  transition: background 0.2s ease;
+}
+.back-to-top:hover {
+  background: rgba(0, 0, 0, 0.85);
+}
+
 
 /* ==========================================================================
    トップ(ヒーロー): フル演出版レイアウトの再現
