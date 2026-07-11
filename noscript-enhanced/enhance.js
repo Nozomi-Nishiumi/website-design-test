@@ -16,7 +16,7 @@
   'use strict';
 
   // デプロイごとに更新するバージョン(キャッシュバスティング/HUD表示用)
-  var ENH_VERSION = '20260711b';
+  var ENH_VERSION = '20260711c';
 
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
@@ -224,8 +224,8 @@
     if (e.data.type === 'missileState') {
       dbg.bg = !!e.data.bg;
       caption.innerHTML = dbg.bg
-        ? '<p class="enh-cap-title">ドローンカメラ接続中</p>' +
-          '<p class="enh-cap-text">なぞって見回す / もう一度タップで切断</p>'
+        ? '<p class="enh-cap-title">逃げる者と追う者の移動戦略</p>' +
+          '<p class="enh-cap-text">ドローンカメラ接続中</p>'
         : '<p class="enh-cap-title">逃げる者と追う者の移動戦略</p>' +
           '<p class="enh-cap-text">画面クリックでドローンカメラに接続</p>';
     }
