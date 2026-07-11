@@ -1067,11 +1067,11 @@ iframe {
   margin-top: 2.5rem;
 }
 
-/* メールアドレスの @ の代替記号(スパム避け): シアンで強調・2倍サイズ */
+/* メールアドレスの @ の代替記号(スパム避け): シアンで強調 */
 .at-mark {
   color: #00e5ff;
   font-weight: bold;
-  font-size: 2em;
+  font-size: 1.333em; /* 2em の 2/3 */
   vertical-align: middle;
   line-height: 1;
 }
