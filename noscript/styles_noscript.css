@@ -787,7 +787,7 @@ section.parallax-section {
 .img-section-02 { background-image: url('images/experiment1.jpg');}
 .img-section-03 { background-image: url('images/snake_frog.jpg');}
 .img-section-04 { background-image: url('images/dive.jpg');}
-.img-section-05 { background-image: url('images/trajectory.jpg');}
+.img-section-05 { background-image: url('images/rugby_ops.jpg?v=20260715a');}
 .img-section-06 { background-image: url('images/programming.jpg?v=20260711a');}
 
 
@@ -842,7 +842,7 @@ section.parallax-section {
   .img-section-02::after { background-image: url('images/experiment1.jpg'); }
   .img-section-03::after { background-image: url('images/snake_frog.jpg'); }
   .img-section-04::after { background-image: url('images/dive.jpg'); }
-  .img-section-05::after { background-image: url('images/trajectory.jpg'); }
+  .img-section-05::after { background-image: url('images/rugby_ops.jpg?v=20260715a'); }
   .img-section-06::after { background-image: url('images/programming.jpg?v=20260711a'); }
 
   /* 強化版では #section-1 は高さマーカー化される(bg:none)ので
