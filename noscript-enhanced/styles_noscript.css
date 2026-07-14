@@ -1067,9 +1067,15 @@ iframe {
   margin-top: 2.5rem;
 }
 
-/* コンタクト: 代表教員名(西海 望)だけ2倍サイズで強調 */
+/* コンタクト: 代表教員名(西海 望)だけ強調(通常の約1.33倍) */
 .name-big {
-  font-size: 2em;
+  font-size: 1.333em;
+}
+
+/* 代表教員の行(名前を含む)全体に下線 */
+.contact-lead {
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
 }
 
 /* メールアドレスの @ の代替記号(スパム避け): シアンで強調。
