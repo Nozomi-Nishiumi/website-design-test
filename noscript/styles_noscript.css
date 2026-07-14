@@ -305,6 +305,11 @@ a img {
   transform: scale(1.15);
 }
 
+/* section-5 のタイル(rugby_ops)は元画像が暗いので明るく見せる */
+.top-grid a[href="#section-5"] img {
+  filter: brightness(1.5);
+}
+
 /* ▼ PC（768px以上） */
 /* ▼ PC（768px以上）で 2枚 + 4枚 */
 @media (min-width: 768px) {
@@ -807,8 +812,8 @@ section.parallax-section {
   background: rgba(0,0,0,0.7); /* ← ここで暗さ調整 */
   z-index: 1; /* ← 背景の上、テキストの下 */
 }
-/* section-5(ゼミ/ラボ教育)だけ暗幕を薄くして背景を明るめに見せる */
-.parallax-section.img-section-05::before { background: rgba(0,0,0,0.5); }
+/* section-5(ゼミ/ラボ教育)の暗幕(背景の暗さ調整用) */
+.parallax-section.img-section-05::before { background: rgba(0,0,0,0.62); }
 .parallax-section > * {
   position: relative;
   z-index: 2;
