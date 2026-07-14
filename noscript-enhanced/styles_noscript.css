@@ -787,7 +787,7 @@ section.parallax-section {
 .img-section-02 { background-image: url('images/experiment1.jpg');}
 .img-section-03 { background-image: url('images/snake_frog.jpg');}
 .img-section-04 { background-image: url('images/dive.jpg');}
-.img-section-05 { background-image: url('images/rugby_ops.jpg?v=20260715a');}
+.img-section-05 { background-image: url('images/rugby_ops.jpg?v=20260715b');}
 .img-section-06 { background-image: url('images/programming.jpg?v=20260711a');}
 
 
@@ -807,6 +807,8 @@ section.parallax-section {
   background: rgba(0,0,0,0.7); /* ← ここで暗さ調整 */
   z-index: 1; /* ← 背景の上、テキストの下 */
 }
+/* section-5(ゼミ/ラボ教育)だけ暗幕を薄くして背景を明るめに見せる */
+.parallax-section.img-section-05::before { background: rgba(0,0,0,0.5); }
 .parallax-section > * {
   position: relative;
   z-index: 2;
@@ -842,7 +844,7 @@ section.parallax-section {
   .img-section-02::after { background-image: url('images/experiment1.jpg'); }
   .img-section-03::after { background-image: url('images/snake_frog.jpg'); }
   .img-section-04::after { background-image: url('images/dive.jpg'); }
-  .img-section-05::after { background-image: url('images/rugby_ops.jpg?v=20260715a'); }
+  .img-section-05::after { background-image: url('images/rugby_ops.jpg?v=20260715b'); }
   .img-section-06::after { background-image: url('images/programming.jpg?v=20260711a'); }
 
   /* 強化版では #section-1 は高さマーカー化される(bg:none)ので
