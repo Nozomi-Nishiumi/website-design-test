@@ -911,8 +911,9 @@
     if(tp.s>0){
       const scale = 1 + 1.2*tp.s;
       drawStarGlow(fctx, tp.x, tp.y, scale, 1.0, palette.target, 0.37, now);
+      // ターゲットもミサイル同様、光源中心の円(グロー+ハロー)は描かない
       const flareIntensity = Math.min(1.0, 0.6 + 0.8*tp.s);
-      drawLensFlare(fctx, tp.x, tp.y, flareIntensity, now, palette.target.line);
+      drawLensFlare(fctx, tp.x, tp.y, flareIntensity, now, palette.target.line, 1, true);
     }
 
     // Missile
