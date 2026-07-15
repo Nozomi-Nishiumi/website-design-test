@@ -640,7 +640,9 @@
   }
 
   // baseRGB: 'r,g,b' format (e.g. '160,210,255')
-  function drawLensFlare(gc, x, y, intensity, t, baseRGB){
+  // ghostGain: ゴーストの不透明度倍率(既定1)。明るい背景に加算合成すると
+  // 既定値では埋もれるため、太陽フレアでは強めに指定する
+  function drawLensFlare(gc, x, y, intensity, t, baseRGB, ghostGain){
     if(!FLARE.enable || intensity<=0) return;
     const prev = gc.globalCompositeOperation;
     gc.globalCompositeOperation = 'lighter';
@@ -681,7 +683,7 @@
       const gy = cy - dy * k;
       // レンズ中心から離れるほど大きく(実レンズのゴーストの性質)
       const gSize = glowR * (0.25 + 0.55*k);
-      const a = 0.22 * I * (1 - i/FLARE.ghostCount);
+      const a = 0.22 * (ghostGain || 1) * I * (1 - i/FLARE.ghostCount);
       const gg = gc.createRadialGradient(gx,gy,0, gx,gy,gSize);
       gg.addColorStop(0.0, `rgba(255,255,255,${0.5*a})`);
       gg.addColorStop(0.25,`rgba(${baseRGB},${0.7*a})`);
@@ -955,7 +957,7 @@
     // 最前面に毎フレーム描画(蓄積なし)。位置は背景の太陽と厳密一致。
     if (showBackground) {
       const sunP = projectSunDir();
-      if (sunP) drawLensFlare(ctx, sunP.x, sunP.y, 1.0, now, '255,236,190');
+      if (sunP) drawLensFlare(ctx, sunP.x, sunP.y, 1.0, now, '255,236,190', 4);
     }
 
     ctx.globalCompositeOperation = prev;
