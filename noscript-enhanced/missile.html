@@ -140,16 +140,23 @@
   tryNextUrl();
 
   // ===== Environment Map Rendering (Optimized for Google Sites) =====
+  // 再利用バッファ: 毎フレーム canvas/ImageData(W*H*4≈数MB)を作り直すと
+  // GC負荷で徐々にカクつくため、初回とリサイズ時のみ確保して使い回す
+  let envRenderCanvas = null, envRenderCtx = null, envRenderData = null;
   function renderEnvironmentMapBackground() {
     if (!envMapImg || !envImageData) return false;
 
     try {
-      // Create temporary canvas for pixel-perfect rendering
-      const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = W;
-      tempCanvas.height = H;
-      const tempCtx = tempCanvas.getContext('2d');
-      const imageData = tempCtx.createImageData(W, H);
+      if (!envRenderCanvas || envRenderCanvas.width !== W || envRenderCanvas.height !== H) {
+        envRenderCanvas = document.createElement('canvas');
+        envRenderCanvas.width = W;
+        envRenderCanvas.height = H;
+        envRenderCtx = envRenderCanvas.getContext('2d');
+        envRenderData = envRenderCtx.createImageData(W, H);
+      }
+      const tempCanvas = envRenderCanvas;
+      const tempCtx = envRenderCtx;
+      const imageData = envRenderData;
 
       // Use the same camera coordinate system as missile simulation
       const cy = Math.cos(cam.yaw);
