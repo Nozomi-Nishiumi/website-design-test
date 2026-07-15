@@ -649,7 +649,9 @@
   // baseRGB: 'r,g,b' format (e.g. '160,210,255')
   // ghostGain: ゴーストの不透明度倍率(既定1)。明るい背景に加算合成すると
   // 既定値では埋もれるため、太陽フレアでは強めに指定する
-  function drawLensFlare(gc, x, y, intensity, t, baseRGB, ghostGain){
+  // noCoreCircles: 光源を中心とした円(グロー円+ハロー環)を描かない
+  // (ミサイル用: 光点は drawStarGlow が担うため円を重ねない)
+  function drawLensFlare(gc, x, y, intensity, t, baseRGB, ghostGain, noCoreCircles){
     if(!FLARE.enable || intensity<=0) return;
     const prev = gc.globalCompositeOperation;
     gc.globalCompositeOperation = 'lighter';
@@ -662,22 +664,24 @@
     const edgeAtten = Math.max(0, 1 - (dist / Math.hypot(cx, cy)));
     const I = intensity * (0.45 + 0.15*Math.sin(t*4)) * edgeAtten;
 
-    // Center glow (color tuning)
     const glowR = FLARE.baseSize * (0.6 + 0.9*I);
-    let g = gc.createRadialGradient(x,y,0, x,y, glowR);
-    g.addColorStop(0.0, `rgba(${baseRGB},${0.34*I})`);
-    g.addColorStop(0.35,`rgba(${baseRGB},${0.24*I})`);
-    g.addColorStop(1.0, `rgba(${baseRGB},0)`);
-    gc.fillStyle = g; gc.beginPath(); gc.arc(x,y, glowR, 0, Math.PI*2); gc.fill();
+    if (!noCoreCircles) {
+      // Center glow (color tuning)
+      let g = gc.createRadialGradient(x,y,0, x,y, glowR);
+      g.addColorStop(0.0, `rgba(${baseRGB},${0.34*I})`);
+      g.addColorStop(0.35,`rgba(${baseRGB},${0.24*I})`);
+      g.addColorStop(1.0, `rgba(${baseRGB},0)`);
+      gc.fillStyle = g; gc.beginPath(); gc.arc(x,y, glowR, 0, Math.PI*2); gc.fill();
 
-    // 光源の周囲の淡いハロー環(実写の逆光でグローの外側に出る細い輪)
-    const haloR = glowR * 1.55;
-    const hg = gc.createRadialGradient(x,y,0, x,y, haloR);
-    hg.addColorStop(0.00, `rgba(${baseRGB},0)`);
-    hg.addColorStop(0.80, `rgba(${baseRGB},0)`);
-    hg.addColorStop(0.90, `rgba(${baseRGB},${0.10*I})`);
-    hg.addColorStop(1.00, `rgba(${baseRGB},0)`);
-    gc.fillStyle = hg; gc.beginPath(); gc.arc(x,y, haloR, 0, Math.PI*2); gc.fill();
+      // 光源の周囲の淡いハロー環(実写の逆光でグローの外側に出る細い輪)
+      const haloR = glowR * 1.55;
+      const hg = gc.createRadialGradient(x,y,0, x,y, haloR);
+      hg.addColorStop(0.00, `rgba(${baseRGB},0)`);
+      hg.addColorStop(0.80, `rgba(${baseRGB},0)`);
+      hg.addColorStop(0.90, `rgba(${baseRGB},${0.10*I})`);
+      hg.addColorStop(1.00, `rgba(${baseRGB},0)`);
+      gc.fillStyle = hg; gc.beginPath(); gc.arc(x,y, haloR, 0, Math.PI*2); gc.fill();
+    }
 
     // Horizontal anamorphic streak (same color)
     const sLen = FLARE.streakLen * (0.5 + I);
@@ -962,9 +966,10 @@
         const scale2 = 1 + 1.2*pp.s;
         drawStarGlow(fctx, pp.x, pp.y, scale2, 1.0, palette.missile, (m.seed||0.12), now);
 
-        // Same-color flare for missile too (控えめ: 太陽より弱い光源のため半分)
+        // Same-color flare for missile too (控えめ: 太陽より弱い光源のため半分。
+        // ミサイル中心の円演出は無し=ストリークとゴーストのみ)
         const flareI = Math.min(0.45, 0.22 + 0.35*pp.s);
-        drawLensFlare(fctx, pp.x, pp.y, flareI, now, palette.missile.line);
+        drawLensFlare(fctx, pp.x, pp.y, flareI, now, palette.missile.line, 1, true);
       }
 
       // Hit/behind/too far → set respawn delay, skip to next frame
