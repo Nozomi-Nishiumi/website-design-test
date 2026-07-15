@@ -962,8 +962,8 @@
         const scale2 = 1 + 1.2*pp.s;
         drawStarGlow(fctx, pp.x, pp.y, scale2, 1.0, palette.missile, (m.seed||0.12), now);
 
-        // Same-color flare for missile too
-        const flareI = Math.min(0.9, 0.45 + 0.7*pp.s);
+        // Same-color flare for missile too (控えめ: 太陽より弱い光源のため半分)
+        const flareI = Math.min(0.45, 0.22 + 0.35*pp.s);
         drawLensFlare(fctx, pp.x, pp.y, flareI, now, palette.missile.line);
       }
 
@@ -990,7 +990,23 @@
     // 最前面に毎フレーム描画(蓄積なし)。位置は背景の太陽と厳密一致。
     if (showBackground) {
       const sunP = projectSunDir();
-      if (sunP) drawLensFlare(ctx, sunP.x, sunP.y, 1.0, now, '255,236,190', 4);
+      if (sunP) {
+        drawLensFlare(ctx, sunP.x, sunP.y, 1.0, now, '255,236,190', 4);
+        // 中心整列ブースト: 太陽がレンズ中心に近づくとベーリンググレア
+        // (画面全体を包む柔らかい白み)が立ち上がる。実写で太陽を正面に
+        // 入れたときのコントラスト低下の再現。
+        const dc = Math.hypot(sunP.x - W*0.5, sunP.y - H*0.5);
+        const align = Math.max(0, 1 - dc / (Math.hypot(W, H) * 0.25));
+        if (align > 0) {
+          const va = 0.28 * align * align * (0.8 + 0.2*Math.sin(now*4));
+          const vr = Math.hypot(W, H) * 0.7;
+          const vg = ctx.createRadialGradient(sunP.x, sunP.y, 0, sunP.x, sunP.y, vr);
+          vg.addColorStop(0.0, `rgba(255,240,215,${va})`);
+          vg.addColorStop(0.5, `rgba(255,240,215,${va*0.45})`);
+          vg.addColorStop(1.0, 'rgba(255,240,215,0)');
+          ctx.fillStyle = vg; ctx.beginPath(); ctx.arc(sunP.x, sunP.y, vr, 0, Math.PI*2); ctx.fill();
+        }
+      }
     }
 
     ctx.globalCompositeOperation = prev;
