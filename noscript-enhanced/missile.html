@@ -614,6 +614,31 @@
     streakThick: 20        // 厚くして見やすく
   };
 
+  // 360度画像(equirect)を解析して得た太陽位置(画素980,513 / 2000x1000)。
+  // 実レンダリング上の太陽飽和核の重心からキャリブレーション済み。
+  // 雲中の輝点(1213,392)はノイズとして除外。
+  const SUN_UV = { u: 0.4901, v: 0.5132 };
+  const SUN_DIR = (() => {
+    const lon = SUN_UV.u * 2 * Math.PI - Math.PI;      // サンプラの逆変換
+    const lat = Math.PI * 0.5 - SUN_UV.v * Math.PI;
+    return { x: Math.sin(lon) * Math.cos(lat), y: Math.sin(lat), z: Math.cos(lon) * Math.cos(lat) };
+  })();
+  // 太陽方向をスクリーンへ投影。renderEnvironmentMapBackground と同一の
+  // カメラ基底・FOVを使うため、背景に描かれる太陽と厳密に一致する。
+  // 背面(dz<=0)なら null。
+  function projectSunDir(){
+    const cy = Math.cos(cam.yaw), sy = Math.sin(cam.yaw);
+    const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
+    const fX = sy*cp, fY = -sp,  fZ = cy*cp;   // 環境マップと同じ(pitch反転)基底
+    const rX = cy,    rY = 0,    rZ = -sy;
+    const uX = sy*sp, uY = cp,   uZ = cy*sp;
+    const dz = SUN_DIR.x*fX + SUN_DIR.y*fY + SUN_DIR.z*fZ;
+    if (dz <= 0.02) return null;
+    const dx = SUN_DIR.x*rX + SUN_DIR.y*rY + SUN_DIR.z*rZ;
+    const dy = SUN_DIR.x*uX + SUN_DIR.y*uY + SUN_DIR.z*uZ;
+    return { x: W*0.5 + FOV*dx/dz, y: H*0.5 - FOV*dy/dz };
+  }
+
   // baseRGB: 'r,g,b' format (e.g. '160,210,255')
   function drawLensFlare(gc, x, y, intensity, t, baseRGB){
     if(!FLARE.enable || intensity<=0) return;
@@ -654,7 +679,8 @@
       const k = FLARE.ghostMin + (i/(FLARE.ghostCount-1))*(FLARE.ghostMax-FLARE.ghostMin);
       const gx = cx - dx * k;
       const gy = cy - dy * k;
-      const gSize = glowR * (0.25 + 0.55*(1-k));
+      // レンズ中心から離れるほど大きく(実レンズのゴーストの性質)
+      const gSize = glowR * (0.25 + 0.55*k);
       const a = 0.22 * I * (1 - i/FLARE.ghostCount);
       const gg = gc.createRadialGradient(gx,gy,0, gx,gy,gSize);
       gg.addColorStop(0.0, `rgba(255,255,255,${0.5*a})`);
@@ -924,6 +950,13 @@
     const prev = ctx.globalCompositeOperation;
     ctx.globalCompositeOperation = 'lighter';
     ctx.drawImage(fx, 0, 0, W, H);
+
+    // 太陽(360度背景の光源)のレンズフレア: カメラ接続中のみ、全合成の
+    // 最前面に毎フレーム描画(蓄積なし)。位置は背景の太陽と厳密一致。
+    if (showBackground) {
+      const sunP = projectSunDir();
+      if (sunP) drawLensFlare(ctx, sunP.x, sunP.y, 1.0, now, '255,236,190');
+    }
 
     ctx.globalCompositeOperation = prev;
 
