@@ -607,12 +607,19 @@
   const FLARE = {
     enable: true,
     baseSize: 90,          // 少し大きく
-    ghostCount: 6,         // ゴーストを増やして目立たせる
-    ghostMin: 0.25,
-    ghostMax: 1.3,
     streakLen: 480,        // ストリークを長く
     streakThick: 20        // 厚くして見やすく
   };
+  // ゴースト定義(実写の逆光写真を参考に3個/光源):
+  //   近: 小さな淡い暖色の円盤 / 中: 緑がかった中型の円盤 /
+  //   遠: 最大の、縁だけ明るい中空の青いリング
+  // k: 光源→レンズ中心方向の位置(1=中心対称点を通過する係数)。
+  // size: グロー半径比。tint: コーティング由来の色(光源色と混合)。
+  const GHOSTS = [
+    { k: 0.45, size: 0.38, ring: false, tint: [255, 235, 215], a: 1.0 },
+    { k: 0.85, size: 0.75, ring: false, tint: [170, 235, 210], a: 0.8 },
+    { k: 1.45, size: 1.90, ring: true,  tint: [160, 215, 255], a: 0.9 },
+  ];
 
   // 360度画像(equirect)を解析して得た太陽位置(画素980,513 / 2000x1000)。
   // 実レンダリング上の太陽飽和核の重心からキャリブレーション済み。
@@ -663,6 +670,15 @@
     g.addColorStop(1.0, `rgba(${baseRGB},0)`);
     gc.fillStyle = g; gc.beginPath(); gc.arc(x,y, glowR, 0, Math.PI*2); gc.fill();
 
+    // 光源の周囲の淡いハロー環(実写の逆光でグローの外側に出る細い輪)
+    const haloR = glowR * 1.55;
+    const hg = gc.createRadialGradient(x,y,0, x,y, haloR);
+    hg.addColorStop(0.00, `rgba(${baseRGB},0)`);
+    hg.addColorStop(0.80, `rgba(${baseRGB},0)`);
+    hg.addColorStop(0.90, `rgba(${baseRGB},${0.10*I})`);
+    hg.addColorStop(1.00, `rgba(${baseRGB},0)`);
+    gc.fillStyle = hg; gc.beginPath(); gc.arc(x,y, haloR, 0, Math.PI*2); gc.fill();
+
     // Horizontal anamorphic streak (same color)
     const sLen = FLARE.streakLen * (0.5 + I);
     const sTh  = FLARE.streakThick * (0.7 + 0.6*I);
@@ -676,18 +692,35 @@
     lg.addColorStop(1.00, `rgba(${baseRGB},0)`);
     gc.fillStyle = lg; gc.fillRect(sx0, sy0, sLen, sTh);
 
-    // Ghost (center inversion direction, same color)
-    for(let i=0;i<FLARE.ghostCount;i++){
-      const k = FLARE.ghostMin + (i/(FLARE.ghostCount-1))*(FLARE.ghostMax-FLARE.ghostMin);
-      const gx = cx - dx * k;
-      const gy = cy - dy * k;
-      // レンズ中心から離れるほど大きく(実レンズのゴーストの性質)
-      const gSize = glowR * (0.25 + 0.55*k);
-      const a = 0.22 * (ghostGain || 1) * I * (1 - i/FLARE.ghostCount);
+    // Ghost (光源とレンズ中心を結ぶ直線上、中心を挟んだ反対側に3個)
+    // 実写準拠: 白いコアは持たず、彩度低めの半透明。近いほど小さく、
+    // 遠いほど大きい。最遠は縁だけ明るい中空のリング。
+    const [br, bg2, bb] = baseRGB.split(',').map(Number);
+    for(let i=0;i<GHOSTS.length;i++){
+      const G = GHOSTS[i];
+      const gx = cx - dx * G.k;
+      const gy = cy - dy * G.k;
+      const gSize = glowR * G.size;
+      const a = 0.22 * (ghostGain || 1) * I * G.a;
+      // コーティング色 70% + 光源色 30% の混合
+      const cr = Math.round(G.tint[0]*0.7 + br*0.3);
+      const cg = Math.round(G.tint[1]*0.7 + bg2*0.3);
+      const cb = Math.round(G.tint[2]*0.7 + bb*0.3);
+      const col = cr + ',' + cg + ',' + cb;
       const gg = gc.createRadialGradient(gx,gy,0, gx,gy,gSize);
-      gg.addColorStop(0.0, `rgba(255,255,255,${0.5*a})`);
-      gg.addColorStop(0.25,`rgba(${baseRGB},${0.7*a})`);
-      gg.addColorStop(1.0, `rgba(${baseRGB},0)`);
+      if (G.ring) {
+        // 中空リング: 中心はほぼ透明、縁の少し内側で最も明るい
+        gg.addColorStop(0.00, `rgba(${col},0)`);
+        gg.addColorStop(0.60, `rgba(${col},${0.06*a})`);
+        gg.addColorStop(0.82, `rgba(${col},${0.55*a})`);
+        gg.addColorStop(0.94, `rgba(${col},${0.20*a})`);
+        gg.addColorStop(1.00, `rgba(${col},0)`);
+      } else {
+        // 柔らかい均一な円盤(輪郭はなだらかにフェード)
+        gg.addColorStop(0.00, `rgba(${col},${0.50*a})`);
+        gg.addColorStop(0.60, `rgba(${col},${0.45*a})`);
+        gg.addColorStop(1.00, `rgba(${col},0)`);
+      }
       gc.fillStyle = gg; gc.beginPath(); gc.arc(gx,gy,gSize,0,Math.PI*2); gc.fill();
     }
 
