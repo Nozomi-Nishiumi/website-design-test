@@ -647,11 +647,11 @@
   }
 
   // baseRGB: 'r,g,b' format (e.g. '160,210,255')
-  // ghostGain: ゴーストの不透明度倍率(既定1)。明るい背景に加算合成すると
-  // 既定値では埋もれるため、太陽フレアでは強めに指定する
-  // noCoreCircles: 光源を中心とした円(グロー円+ハロー環)を描かない
-  // (ミサイル用: 光点は drawStarGlow が担うため円を重ねない)
-  function drawLensFlare(gc, x, y, intensity, t, baseRGB, ghostGain, noCoreCircles){
+  // ghostGain: ゴーストの不透明度倍率(既定1)。太陽=4(明るい空でも見える強さ)、
+  // ミサイル/ターゲット=0.35(すごく薄く)
+  // noHalo: 光源の周囲のハロー環を描かない(ミサイル/ターゲット用。
+  // ハローは太陽のような強い光源だけの演出とする)
+  function drawLensFlare(gc, x, y, intensity, t, baseRGB, ghostGain, noHalo){
     if(!FLARE.enable || intensity<=0) return;
     const prev = gc.globalCompositeOperation;
     gc.globalCompositeOperation = 'lighter';
@@ -664,15 +664,15 @@
     const edgeAtten = Math.max(0, 1 - (dist / Math.hypot(cx, cy)));
     const I = intensity * (0.45 + 0.15*Math.sin(t*4)) * edgeAtten;
 
+    // Center glow (color tuning)
     const glowR = FLARE.baseSize * (0.6 + 0.9*I);
-    if (!noCoreCircles) {
-      // Center glow (color tuning)
-      let g = gc.createRadialGradient(x,y,0, x,y, glowR);
-      g.addColorStop(0.0, `rgba(${baseRGB},${0.34*I})`);
-      g.addColorStop(0.35,`rgba(${baseRGB},${0.24*I})`);
-      g.addColorStop(1.0, `rgba(${baseRGB},0)`);
-      gc.fillStyle = g; gc.beginPath(); gc.arc(x,y, glowR, 0, Math.PI*2); gc.fill();
+    let g = gc.createRadialGradient(x,y,0, x,y, glowR);
+    g.addColorStop(0.0, `rgba(${baseRGB},${0.34*I})`);
+    g.addColorStop(0.35,`rgba(${baseRGB},${0.24*I})`);
+    g.addColorStop(1.0, `rgba(${baseRGB},0)`);
+    gc.fillStyle = g; gc.beginPath(); gc.arc(x,y, glowR, 0, Math.PI*2); gc.fill();
 
+    if (!noHalo) {
       // 光源の周囲の淡いハロー環(実写の逆光でグローの外側に出る細い輪)
       const haloR = glowR * 1.55;
       const hg = gc.createRadialGradient(x,y,0, x,y, haloR);
@@ -911,9 +911,9 @@
     if(tp.s>0){
       const scale = 1 + 1.2*tp.s;
       drawStarGlow(fctx, tp.x, tp.y, scale, 1.0, palette.target, 0.37, now);
-      // ターゲットもミサイル同様、光源中心の円(グロー+ハロー)は描かない
+      // ターゲット: グロー+ストリークは描く。ハローなし・ゴースト極薄
       const flareIntensity = Math.min(1.0, 0.6 + 0.8*tp.s);
-      drawLensFlare(fctx, tp.x, tp.y, flareIntensity, now, palette.target.line, 1, true);
+      drawLensFlare(fctx, tp.x, tp.y, flareIntensity, now, palette.target.line, 0.35, true);
     }
 
     // Missile
@@ -967,10 +967,10 @@
         const scale2 = 1 + 1.2*pp.s;
         drawStarGlow(fctx, pp.x, pp.y, scale2, 1.0, palette.missile, (m.seed||0.12), now);
 
-        // Same-color flare for missile too (控えめ: 太陽より弱い光源のため半分。
-        // ミサイル中心の円演出は無し=ストリークとゴーストのみ)
+        // ミサイル: グロー+ストリークは描く(強度は太陽より弱い光源として半分)。
+        // ハローなし・ゴースト極薄
         const flareI = Math.min(0.45, 0.22 + 0.35*pp.s);
-        drawLensFlare(fctx, pp.x, pp.y, flareI, now, palette.missile.line, 1, true);
+        drawLensFlare(fctx, pp.x, pp.y, flareI, now, palette.missile.line, 0.35, true);
       }
 
       // Hit/behind/too far → set respawn delay, skip to next frame
