@@ -301,6 +301,14 @@ html.enh .enh-cap-title {
   color: #ffd98a;
   text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
 }
+/* タイトル2行目(サブタイトル): 大きさは cap-text と同じ、色はタイトルと同じ */
+html.enh .enh-cap-sub {
+  margin: 0 0 2px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #ffd98a;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
+}
 html.enh .enh-cap-text {
   margin: 0;
   font-size: 12px;

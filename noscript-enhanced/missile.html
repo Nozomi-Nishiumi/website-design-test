@@ -625,7 +625,7 @@
   const GHOSTS = [
     { k: 0.45, size: 0.38, ring: false, tint: [255, 235, 215], a: 1.0 },
     { k: 0.85, size: 0.75, ring: false, tint: [170, 235, 210], a: 0.8 },
-    { k: 1.45, size: 1.90, ring: true,  tint: [160, 215, 255], a: 0.9 },
+    { k: 1.45, size: 1.90, ring: true,  tint: [160, 215, 255], a: 0.6 },
   ];
 
   // 360度画像(equirect)を解析して得た太陽位置(画素980,513 / 2000x1000)。
@@ -669,7 +669,9 @@
 
     // Weaken when near off-screen
     const edgeAtten = Math.max(0, 1 - (dist / Math.hypot(cx, cy)));
-    const I = intensity * (0.45 + 0.15*Math.sin(t*4)) * edgeAtten;
+    // 明滅はゆっくり(周期約4秒)。ゴーストの大きさもこれに連動するため、
+    // 速いとサイズの脈動が目についてしまう
+    const I = intensity * (0.45 + 0.15*Math.sin(t*1.5)) * edgeAtten;
 
     // Center glow (color tuning)
     const glowR = FLARE.baseSize * (0.6 + 0.9*I);
@@ -720,12 +722,15 @@
       const col = cr + ',' + cg + ',' + cb;
       const gg = gc.createRadialGradient(gx,gy,0, gx,gy,gSize);
       if (G.ring) {
-        // 中空リング: 中心はほぼ透明、縁の少し内側で最も明るい
-        gg.addColorStop(0.00, `rgba(${col},0)`);
-        gg.addColorStop(0.60, `rgba(${col},${0.06*a})`);
-        gg.addColorStop(0.82, `rgba(${col},${0.55*a})`);
-        gg.addColorStop(0.94, `rgba(${col},${0.20*a})`);
-        gg.addColorStop(1.00, `rgba(${col},0)`);
+        // 中空リング: 内側も少し明るくして縁とのコントラストを弱める。
+        // 色収差: 内側は青寄り、外縁は赤(マゼンタ)寄りにうっすらずらす
+        const colIn  = Math.round(cr*0.80) + ',' + Math.round(cg*0.95) + ',' + Math.min(255, Math.round(cb*1.15));
+        const colOut = Math.min(255, Math.round(cr*1.25)) + ',' + Math.round(cg*0.85) + ',' + cb;
+        gg.addColorStop(0.00, `rgba(${colIn},${0.10*a})`);
+        gg.addColorStop(0.60, `rgba(${colIn},${0.16*a})`);
+        gg.addColorStop(0.82, `rgba(${col},${0.38*a})`);
+        gg.addColorStop(0.92, `rgba(${colOut},${0.20*a})`);
+        gg.addColorStop(1.00, `rgba(${colOut},0)`);
       } else {
         // 柔らかい均一な円盤(輪郭はなだらかにフェード)
         gg.addColorStop(0.00, `rgba(${col},${0.50*a})`);
@@ -1011,7 +1016,7 @@
         const dc = Math.hypot(sunP.x - W*0.5, sunP.y - H*0.5);
         const align = Math.max(0, 1 - dc / (Math.hypot(W, H) * 0.25));
         if (align > 0) {
-          const va = 0.28 * align * align * (0.8 + 0.2*Math.sin(now*4));
+          const va = 0.28 * align * align * (0.8 + 0.2*Math.sin(now*1.5));
           const vr = Math.hypot(W, H) * 0.7;
           const vg = ctx.createRadialGradient(sunP.x, sunP.y, 0, sunP.x, sunP.y, vr);
           vg.addColorStop(0.0, `rgba(255,240,215,${va})`);

@@ -16,7 +16,7 @@
   'use strict';
 
   // デプロイごとに更新するバージョン(キャッシュバスティング/HUD表示用)
-  var ENH_VERSION = '20260715h';
+  var ENH_VERSION = '20260716a';
 
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
@@ -80,6 +80,7 @@
   caption.className = 'enh-missile-caption';
   caption.innerHTML =
     '<p class="enh-cap-title">逃げる者と追う者の移動戦略</p>' +
+    '<p class="enh-cap-sub">マルチタスク対処方策の探求</p>' +
     '<p class="enh-cap-text">画面クリックでドローンカメラに接続</p>';
   sticky.appendChild(caption);
 
@@ -225,8 +226,10 @@
       dbg.bg = !!e.data.bg;
       caption.innerHTML = dbg.bg
         ? '<p class="enh-cap-title">逃げる者と追う者の移動戦略</p>' +
+          '<p class="enh-cap-sub">マルチタスク対処方策の探求</p>' +
           '<p class="enh-cap-text">ドローンカメラ接続中</p>'
         : '<p class="enh-cap-title">逃げる者と追う者の移動戦略</p>' +
+          '<p class="enh-cap-sub">マルチタスク対処方策の探求</p>' +
           '<p class="enh-cap-text">画面クリックでドローンカメラに接続</p>';
     }
   });
