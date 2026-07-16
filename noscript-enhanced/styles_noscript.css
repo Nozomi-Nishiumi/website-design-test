@@ -835,6 +835,20 @@ section.parallax-section {
     background-image: none; /* 背景は::after側に移す(下のurl指定を上書き) */
   }
 
+  /* セクション境界の明るい線の対策(iPadで顕在化):
+     clip-path の境界と暗幕(::before)の描画境界のサブピクセル丸めがずれると、
+     境界に暗幕の乗らない生の背景(明るい空)が1px弱の線として漏れる。
+     暗幕を上下1pxはみ出させ(はみ出しはclip-pathが正確に切る)、
+     隣接セクション自体も1px重ねてスキマを塞ぐ */
+  .parallax-section::before {
+    top: -1px;
+    bottom: -1px;
+    height: auto; /* 別ブロックの height:100% を打ち消して上下-1pxを効かせる */
+  }
+  .parallax-section + .parallax-section {
+    margin-top: -1px;
+  }
+
   .parallax-section::after {
     content: "";
     position: fixed;
