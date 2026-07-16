@@ -700,10 +700,12 @@
         if (vis <= 0) continue;
         const hr = haloBase * Ld.r;
         const ha = Ld.a * vis * intensity * flick;
+        // 内側にも薄い明るみを持たせ、縁のピークも抑えて
+        // 縁と内側のコントラストを弱める
         const hg = gc.createRadialGradient(x,y,0, x,y, hr);
-        hg.addColorStop(0.00, `rgba(${baseRGB},0)`);
-        hg.addColorStop(0.86, `rgba(${baseRGB},0)`);
-        hg.addColorStop(0.93, `rgba(${baseRGB},${ha})`);
+        hg.addColorStop(0.00, `rgba(${baseRGB},${0.22*ha})`);
+        hg.addColorStop(0.55, `rgba(${baseRGB},${0.30*ha})`);
+        hg.addColorStop(0.92, `rgba(${baseRGB},${0.75*ha})`);
         hg.addColorStop(1.00, `rgba(${baseRGB},0)`);
         gc.fillStyle = hg; gc.beginPath(); gc.arc(x,y, hr, 0, Math.PI*2); gc.fill();
       }
@@ -809,7 +811,7 @@
 
         // 爆発コアに同色フレア（fx）
         const flareRGB = (e.type==='missile') ? palette.missile.line : palette.target.line;
-        drawLensFlare(fctx, p.x, p.y, Math.min(1.0, 0.9*u*(0.8+0.8*p.s)), now, flareRGB);
+        drawLensFlare(fctx, p.x, p.y, Math.min(1.0, 0.9*u*(0.8+0.8*p.s)), now, flareRGB, 1, true);
       }
       if(glowAlive){
         const u = 1 - (t/EXP_GLOW_LIFE);
@@ -820,7 +822,7 @@
         ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x,p.y, r,0,Math.PI*2); ctx.fill();
 
         const flareRGB = (e.type==='missile') ? palette.missile.line : palette.target.line;
-        drawLensFlare(fctx, p.x, p.y, 0.45*u*(0.8+0.6*p.s), now, flareRGB);
+        drawLensFlare(fctx, p.x, p.y, 0.45*u*(0.8+0.6*p.s), now, flareRGB, 1, true);
       }
     }
     for(let i=0;i<expl.length;){ if(now - expl[i].t0 > EXP_GLOW_LIFE) expl.splice(i,1); else i++; }
