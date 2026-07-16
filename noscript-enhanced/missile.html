@@ -32,12 +32,11 @@
   // 物理解像度幅の目安。4K以上は外付けディスプレイ＝遠距離と見なす
   const _screenPxW = (screen.width || 0) * (window.devicePixelRatio || 1);
   const _is4K = _screenPxW >= 3840;
-  // タブレット判別: タッチ端末でも画面短辺が大きいもの(iPad等)はスマホより
-  // 画面が広く、視距離もやや遠い。スマホ扱い(35cm)のままだと CSS 幅の
-  // 大きさから Θ が125°級の魚眼になるため、専用の視距離を割り当てる。
-  // (画面の物理寸法(cm)を返すWeb APIは存在しないため、CSS px でのクラス分け)
-  const _isTablet = _touchFOV && Math.min(screen.width || 0, screen.height || 0) >= 600;
-  const D_DEVICE = _touchFOV ? (_isTablet ? 55 : 35) : (_is4K ? 100 : 60);  // 想定視距離(cm)
+  // スマホ判定はタッチかつ画面短辺が小さい端末のみ。iPad等のタブレットは
+  // タッチでも PC 判定(60cm)に入れる(スマホ扱いにすると、短い焦点距離に
+  // 広い画面幅が乗って魚眼になるため)
+  const _isPhone = _touchFOV && Math.min(screen.width || 0, screen.height || 0) < 600;
+  const D_DEVICE = _isPhone ? 35 : (_is4K ? 100 : 60);  // 想定視距離(cm)
   const FOV = FOV_BASE * D_DEVICE / D_REF;
   const CAM_FWD_PX_S = 520 * 8;
   const TARGET_DIST  = 1200 * 9;
