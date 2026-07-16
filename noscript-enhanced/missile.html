@@ -669,9 +669,9 @@
 
     // Weaken when near off-screen
     const edgeAtten = Math.max(0, 1 - (dist / Math.hypot(cx, cy)));
-    // 明滅はゆっくり(周期約4秒)。ゴーストの大きさもこれに連動するため、
-    // 速いとサイズの脈動が目についてしまう
-    const I = intensity * (0.45 + 0.15*Math.sin(t*1.5)) * edgeAtten;
+    // 明滅はゆっくり(周期約4秒)
+    const flick = 0.45 + 0.15*Math.sin(t*1.5);
+    const I = intensity * flick * edgeAtten;
 
     // Center glow (color tuning)
     const glowR = FLARE.baseSize * (0.6 + 0.9*I);
@@ -682,14 +682,31 @@
     gc.fillStyle = g; gc.beginPath(); gc.arc(x,y, glowR, 0, Math.PI*2); gc.fill();
 
     if (!noHalo) {
-      // 光源の周囲の淡いハロー環(実写の逆光でグローの外側に出る細い輪)
-      const haloR = glowR * 1.55;
-      const hg = gc.createRadialGradient(x,y,0, x,y, haloR);
-      hg.addColorStop(0.00, `rgba(${baseRGB},0)`);
-      hg.addColorStop(0.80, `rgba(${baseRGB},0)`);
-      hg.addColorStop(0.90, `rgba(${baseRGB},${0.10*I})`);
-      hg.addColorStop(1.00, `rgba(${baseRGB},0)`);
-      gc.fillStyle = hg; gc.beginPath(); gc.arc(x,y, haloR, 0, Math.PI*2); gc.fill();
+      // 多層ハロー: レンズ内の多層反射による固定半径の同心円群。
+      // 円の輪郭(半径)は光量で動かさない。光源がレンズ中心に近づく=
+      // 入射光が増えるほど、外側の層まで映り込む(映る範囲だけが広がる)。
+      // th: その層が映り始める光量しきい値(光量 L=中心整列度)
+      const L = edgeAtten;
+      const haloBase = FLARE.baseSize * 1.4; // 固定基準半径(明滅・光量に非依存)
+      const HALO_LAYERS = [
+        { r: 1.00, th: 0.00, a: 0.100 },
+        { r: 1.45, th: 0.30, a: 0.085 },
+        { r: 1.95, th: 0.55, a: 0.070 },
+        { r: 2.50, th: 0.75, a: 0.060 },
+      ];
+      for (let hi = 0; hi < HALO_LAYERS.length; hi++) {
+        const Ld = HALO_LAYERS[hi];
+        const vis = Math.max(0, Math.min(1, (L - Ld.th) / 0.12)); // 立ち上がり
+        if (vis <= 0) continue;
+        const hr = haloBase * Ld.r;
+        const ha = Ld.a * vis * intensity * flick;
+        const hg = gc.createRadialGradient(x,y,0, x,y, hr);
+        hg.addColorStop(0.00, `rgba(${baseRGB},0)`);
+        hg.addColorStop(0.86, `rgba(${baseRGB},0)`);
+        hg.addColorStop(0.93, `rgba(${baseRGB},${ha})`);
+        hg.addColorStop(1.00, `rgba(${baseRGB},0)`);
+        gc.fillStyle = hg; gc.beginPath(); gc.arc(x,y, hr, 0, Math.PI*2); gc.fill();
+      }
     }
 
     // Horizontal anamorphic streak (same color)
@@ -706,36 +723,41 @@
     gc.fillStyle = lg; gc.fillRect(sx0, sy0, sLen, sTh);
 
     // Ghost (光源とレンズ中心を結ぶ直線上、中心を挟んだ反対側に3個)
-    // 実写準拠: 白いコアは持たず、彩度低めの半透明。近いほど小さく、
-    // 遠いほど大きい。最遠は縁だけ明るい中空のリング。
+    // 実写準拠: 白いコアは持たず、彩度低めの半透明。最遠は中空のリング。
+    // サイズは明滅(I)に連動させず、光源がレンズ中心に近いほど
+    // 緩やかに小さくなる(輪郭の脈動もこれで消える)。
+    const distN = Math.min(1, dist / Math.hypot(cx, cy)); // 0=中心, 1=隅
+    const gBase = FLARE.baseSize * (0.80 + 0.35 * distN);
     const [br, bg2, bb] = baseRGB.split(',').map(Number);
     for(let i=0;i<GHOSTS.length;i++){
       const G = GHOSTS[i];
       const gx = cx - dx * G.k;
       const gy = cy - dy * G.k;
-      const gSize = glowR * G.size;
+      const gSize = gBase * G.size;
       const a = 0.22 * (ghostGain || 1) * I * G.a;
       // コーティング色 70% + 光源色 30% の混合
       const cr = Math.round(G.tint[0]*0.7 + br*0.3);
       const cg = Math.round(G.tint[1]*0.7 + bg2*0.3);
       const cb = Math.round(G.tint[2]*0.7 + bb*0.3);
       const col = cr + ',' + cg + ',' + cb;
+      // 色収差: 内側は青寄り、外縁は赤(マゼンタ)寄りに強めにずらす
+      const colIn  = Math.round(cr*0.65) + ',' + Math.round(cg*0.90) + ',' + Math.min(255, Math.round(cb*1.35));
+      const colOut = Math.min(255, Math.round(cr*1.45)) + ',' + Math.round(cg*0.75) + ',' + Math.round(cb*0.90);
       const gg = gc.createRadialGradient(gx,gy,0, gx,gy,gSize);
       if (G.ring) {
-        // 中空リング: 内側も少し明るくして縁とのコントラストを弱める。
-        // 色収差: 内側は青寄り、外縁は赤(マゼンタ)寄りにうっすらずらす
-        const colIn  = Math.round(cr*0.80) + ',' + Math.round(cg*0.95) + ',' + Math.min(255, Math.round(cb*1.15));
-        const colOut = Math.min(255, Math.round(cr*1.25)) + ',' + Math.round(cg*0.85) + ',' + cb;
+        // 中空リング: 内側も少し明るく(縁とのコントラスト弱め)。
+        // エッジはシャープに、縁の内外で色をずらす
         gg.addColorStop(0.00, `rgba(${colIn},${0.10*a})`);
-        gg.addColorStop(0.60, `rgba(${colIn},${0.16*a})`);
-        gg.addColorStop(0.82, `rgba(${col},${0.38*a})`);
-        gg.addColorStop(0.92, `rgba(${colOut},${0.20*a})`);
+        gg.addColorStop(0.70, `rgba(${colIn},${0.16*a})`);
+        gg.addColorStop(0.86, `rgba(${col},${0.42*a})`);
+        gg.addColorStop(0.95, `rgba(${colOut},${0.26*a})`);
         gg.addColorStop(1.00, `rgba(${colOut},0)`);
       } else {
-        // 柔らかい均一な円盤(輪郭はなだらかにフェード)
+        // 円盤: 本体は均一、縁は狭い帯で色収差フリンジを付けてシャープに落とす
         gg.addColorStop(0.00, `rgba(${col},${0.50*a})`);
-        gg.addColorStop(0.60, `rgba(${col},${0.45*a})`);
-        gg.addColorStop(1.00, `rgba(${col},0)`);
+        gg.addColorStop(0.74, `rgba(${col},${0.46*a})`);
+        gg.addColorStop(0.90, `rgba(${colOut},${0.30*a})`);
+        gg.addColorStop(1.00, `rgba(${colOut},0)`);
       }
       gc.fillStyle = gg; gc.beginPath(); gc.arc(gx,gy,gSize,0,Math.PI*2); gc.fill();
     }
