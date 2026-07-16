@@ -687,6 +687,9 @@
       // 入射光が増えるほど、外側の層まで映り込む(映る範囲だけが広がる)。
       // th: その層が映り始める光量しきい値(光量 L=中心整列度)
       const L = edgeAtten;
+      // 全体ゲイン: 整列度Lの3乗で指数的に立ち上がる。
+      // 太陽から外れている時はほぼ消え、正対で最大0.7(従来最大の7割)
+      const haloGain = 0.7 * Math.pow(L, 3);
       const haloBase = FLARE.baseSize * 1.4; // 固定基準半径(明滅・光量に非依存)
       const HALO_LAYERS = [
         { r: 1.00, th: 0.00, a: 0.100 },
@@ -694,12 +697,12 @@
         { r: 1.95, th: 0.55, a: 0.070 },
         { r: 2.50, th: 0.75, a: 0.060 },
       ];
-      for (let hi = 0; hi < HALO_LAYERS.length; hi++) {
+      for (let hi = 0; hi < HALO_LAYERS.length && haloGain > 0.002; hi++) {
         const Ld = HALO_LAYERS[hi];
         const vis = Math.max(0, Math.min(1, (L - Ld.th) / 0.12)); // 立ち上がり
         if (vis <= 0) continue;
         const hr = haloBase * Ld.r;
-        const ha = Ld.a * vis * intensity * flick;
+        const ha = Ld.a * vis * intensity * flick * haloGain;
         // 内側にも薄い明るみを持たせ、縁のピークも抑えて
         // 縁と内側のコントラストを弱める
         const hg = gc.createRadialGradient(x,y,0, x,y, hr);
