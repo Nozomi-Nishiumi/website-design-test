@@ -764,7 +764,11 @@ section.parallax-section {
   background-repeat: no-repeat;
 }
 
-@media (min-width: 769px) {
+/* fixed背景は「マウス等の精密ポインタを持つ本物のPC」だけに適用する。
+   iPad(タッチ主体)は幅769px以上でもここに入れない: iPadOS Safariは
+   fixed背景のcoverを文書全体の高さ基準で計算するため、背景が
+   異常に拡大されるバグがある(::after方式で代替する) */
+@media (min-width: 769px) and (pointer: fine) {
   section.parallax-section {
     background-attachment: fixed;
   }
@@ -819,12 +823,13 @@ section.parallax-section {
   z-index: 2;
 }
 
-/* --- スマホでもパララックスを再現 ---
-   iOS Safari は background-attachment: fixed を無視するため、
+/* --- スマホ/タブレットでもパララックスを再現 ---
+   iOS/iPadOS Safari は background-attachment: fixed を正しく扱えないため、
    セクションを clip-path で「窓」にし、その中に position:fixed の
    背景レイヤー(::after)を置いて同じ見た目を実現する。
+   タッチ主体の端末(pointer: coarse)は幅に関係なくこちらを使う(iPad対策)。
    ::after(z:-1) → 暗幕::before(z:1) → 本文(z:2) の順に重なる */
-@media (max-width: 768px) {
+@media (max-width: 768px), (pointer: coarse) {
   .parallax-section {
     clip-path: inset(0); /* fixedレイヤーをセクション範囲に閉じ込める */
     background-image: none; /* 背景は::after側に移す(下のurl指定を上書き) */
