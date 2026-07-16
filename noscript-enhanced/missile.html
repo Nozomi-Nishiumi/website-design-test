@@ -26,13 +26,18 @@
   // (端まで振ったときの回転レンジ/レートも上がる)。画面の実寸(小ささ)は入れず
   // 距離だけ補正する——実寸を入れると小さいスマホで Θ が極端に狭くなるため、
   // PCの基準を継承する。
-  const FOV_BASE = 520;            // 基準(PC<4K・50cmでこの見え方が整っている)
+  const FOV_BASE = 520;            // 基準(PC<4K・60cmでこの見え方が整っている)
   const D_REF = 60;                // 基準視距離(cm) = PC(4K未満)
   const _touchFOV = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
   // 物理解像度幅の目安。4K以上は外付けディスプレイ＝遠距離と見なす
   const _screenPxW = (screen.width || 0) * (window.devicePixelRatio || 1);
   const _is4K = _screenPxW >= 3840;
-  const D_DEVICE = _touchFOV ? 35 : (_is4K ? 100 : 60);  // 想定視距離(cm)
+  // タブレット判別: タッチ端末でも画面短辺が大きいもの(iPad等)はスマホより
+  // 画面が広く、視距離もやや遠い。スマホ扱い(35cm)のままだと CSS 幅の
+  // 大きさから Θ が125°級の魚眼になるため、専用の視距離を割り当てる。
+  // (画面の物理寸法(cm)を返すWeb APIは存在しないため、CSS px でのクラス分け)
+  const _isTablet = _touchFOV && Math.min(screen.width || 0, screen.height || 0) >= 600;
+  const D_DEVICE = _touchFOV ? (_isTablet ? 55 : 35) : (_is4K ? 100 : 60);  // 想定視距離(cm)
   const FOV = FOV_BASE * D_DEVICE / D_REF;
   const CAM_FWD_PX_S = 520 * 8;
   const TARGET_DIST  = 1200 * 9;
