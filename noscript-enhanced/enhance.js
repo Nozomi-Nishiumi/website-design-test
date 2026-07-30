@@ -16,7 +16,7 @@
   'use strict';
 
   // デプロイごとに更新するバージョン(キャッシュバスティング/HUD表示用)
-  var ENH_VERSION = '20260731a';
+  var ENH_VERSION = '20260731b';
 
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
@@ -78,12 +78,6 @@
 
   var caption = document.createElement('div');
   caption.className = 'enh-missile-caption';
-  // キャプションの下段は3状態:
-  //   準備中(360度背景ロード中) → 「ドローンカメラ接続中…」
-  //   準備完了・未接続        → 「ドローンカメラ接続可能：画面クリックで接続」
-  //   接続中(背景表示中)      → 「ドローンカメラ接続中」
-  // ロード待ちを「接続シーケンス」として演出し、体感の待ち時間を隠す
-  var envReady = false;
   function captionHTML(bottom) {
     return '<p class="enh-cap-title">逃げる者と追う者の移動戦略</p>' +
       '<p class="enh-cap-sub">マルチタスク対処方策の探求</p>' +
@@ -91,9 +85,7 @@
   }
   function updateCaption() {
     caption.innerHTML = captionHTML(
-      dbg.bg ? 'ドローンカメラ接続中'
-        : (envReady ? 'ドローンカメラ接続可能：画面クリックで接続'
-                    : 'ドローンカメラ接続中…')
+      dbg.bg ? 'ドローンカメラ接続中' : '画面クリックでドローンカメラに接続'
     );
   }
   sticky.appendChild(caption);
@@ -109,7 +101,7 @@
   // デバッグHUD: URL に ?debug=1 を付けると実機の内部状態を画面に表示する
   var DEBUG = /[?&]debug=1/.test(location.search);
   var dbg = { relay: 0, lastDy: 0, pS1: 0, mOp: 0, fw: 0, lt: 0, cap: false, wd: 0, bg: false, ifr: null };
-  updateCaption(); // 初期表示(準備中: ドローンカメラ接続中…)
+  updateCaption(); // 初期表示
   var hud = null;
   if (DEBUG) {
     hud = document.createElement('div');
@@ -237,10 +229,6 @@
     if (!e.data) return;
     if (e.data.type === 'missileScroll') onMissileScroll(e.data.deltaY);
     if (e.data.type === 'missileDebug') dbg.ifr = e.data;
-    if (e.data.type === 'missileEnvReady') {
-      envReady = true;
-      updateCaption();
-    }
     if (e.data.type === 'missileState') {
       dbg.bg = !!e.data.bg;
       updateCaption();
