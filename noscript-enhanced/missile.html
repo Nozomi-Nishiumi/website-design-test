@@ -116,6 +116,7 @@
     const envCtx = envCanvas.getContext('2d');
     envCtx.drawImage(img, 0, 0);
     envImageData = envCtx.getImageData(0, 0, img.width, img.height);
+    notifyEnvReady();
   };
   img.onerror = function(e) {
     tryNextUrl();
@@ -138,7 +139,18 @@
     } else {
       envMapImg = null;
       envImageData = null;
+      notifyEnvReady(); // 全URL失敗でもフォールバック背景で接続可能とする
     }
+  }
+
+  // 親ページへ「360度背景の準備完了」を通知(キャプションの
+  // 接続中→接続可能 切り替えに使う)
+  function notifyEnvReady(){
+    try{
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({type:'missileEnvReady'}, '*');
+      }
+    }catch(_){}
   }
 
   tryNextUrl();

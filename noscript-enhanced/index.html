@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="styles_noscript.css?v=20260716b" type="text/css">
   <!-- 漸進強化: JSが無効ならこの2行は無害で、noscript版がそのまま表示される -->
   <link rel="stylesheet" href="enhance.css?v=20260716a" type="text/css">
-  <script src="enhance.js?v=20260717a" defer></script>
+  <script src="enhance.js?v=20260731a" defer></script>
 </head>
 <body>
 
@@ -79,12 +79,12 @@
       </div>
 
       <div class="top-grid">
-  <a href="#section-1" class="img-wrap"><img src="images/pigeon.jpg" alt=""></a>
-  <a href="#section-2" class="img-wrap"><img src="images/experiment1.jpg" alt=""></a>
-  <a href="#section-3" class="img-wrap"><img src="images/snake_frog.jpg" alt=""></a>
-  <a href="#section-4" class="img-wrap"><img src="images/dive.jpg" alt=""></a>
-  <a href="#section-5" class="img-wrap"><img src="images/rugby_ops.jpg?v=20260715b" alt=""></a>
-  <a href="#section-6" class="img-wrap"><img src="images/programming.jpg?v=20260711a" alt=""></a>
+  <a href="#section-1" class="img-wrap"><img src="images/pigeon.jpg" fetchpriority="high" alt=""></a>
+  <a href="#section-2" class="img-wrap"><img src="images/experiment1.jpg" fetchpriority="high" alt=""></a>
+  <a href="#section-3" class="img-wrap"><img src="images/snake_frog.jpg" fetchpriority="high" alt=""></a>
+  <a href="#section-4" class="img-wrap"><img src="images/dive.jpg" fetchpriority="high" alt=""></a>
+  <a href="#section-5" class="img-wrap"><img src="images/rugby_ops.jpg?v=20260715b" fetchpriority="high" alt=""></a>
+  <a href="#section-6" class="img-wrap"><img src="images/programming.jpg?v=20260711a" fetchpriority="high" alt=""></a>
 </div>
     </div>
   </section>
@@ -129,10 +129,10 @@
       <div class="topic-image">
         <div class="square-wrap">
           <div class="fade-slider">
-            <img src="images/2013-06-22_web.jpg" alt="">
-            <img src="images/504475205_24188017144136041_7430044439574952626_n.jpg" alt="">
-            <img src="images/P2280008_web.jpg" alt="">
-            <img src="images/field_tonbo.jpg" alt="">
+            <img src="images/2013-06-22_web.jpg" loading="lazy" decoding="async" alt="">
+            <img src="images/504475205_24188017144136041_7430044439574952626_n.jpg" loading="lazy" decoding="async" alt="">
+            <img src="images/P2280008_web.jpg" loading="lazy" decoding="async" alt="">
+            <img src="images/field_tonbo.jpg" loading="lazy" decoding="async" alt="">
           </div>
         </div>
       </div>
@@ -152,7 +152,7 @@
       </div>
       <div class="topic-image">
         <div class="square-wrap">
-          <img src="images/empirical_research.gif">
+          <img src="images/empirical_research.gif" loading="lazy" decoding="async">
         </div>
       </div>
     </div>
@@ -171,7 +171,7 @@
       </div>
       <div class="topic-image">
         <div class="square-wrap">
-          <img src="images/theoretical_research.gif">
+          <img src="images/theoretical_research.gif" loading="lazy" decoding="async">
         </div>
       </div>
     </div>
@@ -190,7 +190,7 @@
       </div>
       <div class="topic-image">
         <div class="square-wrap">
-          <img src="images/experimental_tech.gif">
+          <img src="images/experimental_tech.gif" loading="lazy" decoding="async">
         </div>
       </div>
     </div>
@@ -212,7 +212,7 @@
   </div>
 
   <div class="col">
-      <img src="anime/exp_all.png?v=20260710e" alt="">
+      <img src="anime/exp_all.png?v=20260710e" loading="lazy" decoding="async" alt="">
   </div>
 </div>
     </div>
@@ -245,7 +245,7 @@
            YouTube を新しいタブで開く(iframe を初期状態で読み込まない分軽い) -->
       <div class="video-thumb">
         <a href="https://www.youtube.com/watch?v=jdOTK1WARvU" target="_blank" rel="noopener noreferrer" aria-label="受賞記念講演の動画を再生" onclick="var f=document.createElement('iframe');f.src='https://www.youtube.com/embed/jdOTK1WARvU?rel=0&amp;modestbranding=1&amp;autoplay=1&amp;playsinline=1';f.title='YouTube video player';f.setAttribute('frameborder','0');f.setAttribute('allow','accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');f.setAttribute('referrerpolicy','strict-origin-when-cross-origin');f.setAttribute('allowfullscreen','');this.parentNode.replaceChild(f,this);return false;">
-          <img src="images/yt_thumbnail.jpg" alt="受賞記念講演の動画サムネイル">
+          <img src="images/yt_thumbnail.jpg" loading="lazy" decoding="async" alt="受賞記念講演の動画サムネイル">
         </a>
       </div>
       </div>
@@ -309,7 +309,7 @@
         <div class="col">
           <!-- フル版準拠: 透過PNGの背後にbackdrop-filterの磨りガラス層を敷く -->
           <div class="member-glass">
-            <img src="images/member.png?v=20260730b" alt="ラボメンバー">
+            <img src="images/member.png?v=20260730b" loading="lazy" decoding="async" alt="ラボメンバー">
           </div>
         </div>
       </div>
@@ -441,7 +441,7 @@
           </div>
           <div class="col">
             <a href="https://sites.google.com/view/behavioral-biology/seminar" target="_blank" rel="noopener noreferrer" class="banner-link">
-              <img src="images/banner.jpg?v=20260710f" alt="交流会イベントバナー">
+              <img src="images/banner.jpg?v=20260710f" loading="lazy" decoding="async" alt="交流会イベントバナー">
             </a>
           </div>
         </div>
