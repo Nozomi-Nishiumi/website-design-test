@@ -16,7 +16,17 @@
   'use strict';
 
   // デプロイごとに更新するバージョン(キャッシュバスティング/HUD表示用)
-  var ENH_VERSION = '20260731b';
+  var ENH_VERSION = '20260802a';
+
+  // ハンバーガーメニュー: 項目をタップしたら閉じる(CSSのチェックボックスを外す)。
+  // 演出の有無に関係なく効かせたいので、reduced-motion の早期 return より前に置く
+  var navToggle = document.getElementById('nav-toggle');
+  if (navToggle) {
+    var navLinks = document.querySelectorAll('.nav-links a');
+    for (var ni = 0; ni < navLinks.length; ni++) {
+      navLinks[ni].addEventListener('click', function () { navToggle.checked = false; });
+    }
+  }
 
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
