@@ -333,8 +333,16 @@
     // 旧実装はピンホール型+中心0.45Hで、project()(FOV/(FOV+cz)型+中心0.5H)と
     // 食い違い、描画ターゲットが常にカーソルの36〜50px下にずれていた
     // (画面上端に照準を置いてもナビ帯の下までしか上がれない実害)。
+    // 奥行き cz は「カメラからの実距離 = TARGET_DIST」を満たすよう毎フレーム解く。
+    // cz を定数にすると画面端でターゲットが実質約1.7倍遠くなり、ミサイルの
+    // 追跡が鈍って見える(実害)。距離一定なら空間配置は旧実装と同等(端で3%以内)。
+    //   |T|^2 = (ρ/s)^2 + cz^2 = TARGET_DIST^2, s = FOV/(FOV+cz) → cz の二次方程式
     const {f,r,u} = camAxes();
-    const cz = TARGET_DIST;
+    const rho2 = ox*ox + oy*oy;
+    const qa = 1 + rho2/(FOV*FOV);
+    const qb = 2*rho2/FOV;
+    const qc = rho2 - TARGET_DIST*TARGET_DIST;
+    const cz = (-qb + Math.sqrt(qb*qb - 4*qa*qc)) / (2*qa);
     const s = FOV/(FOV+cz);
     const cx = ox/s, cy = oy/s;
     return {x: cam.x + r.x*cx + u.x*cy + f.x*cz,
