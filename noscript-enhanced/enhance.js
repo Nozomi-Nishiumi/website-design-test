@@ -16,7 +16,7 @@
   'use strict';
 
   // デプロイごとに更新するバージョン(キャッシュバスティング/HUD表示用)
-  var ENH_VERSION = '20260802a';
+  var ENH_VERSION = '20260804a';
 
   // ハンバーガーメニュー: 項目をタップしたら閉じる(CSSのチェックボックスを外す)。
   // 演出の有無に関係なく効かせたいので、reduced-motion の早期 return より前に置く
@@ -90,7 +90,7 @@
   caption.className = 'enh-missile-caption';
   function captionHTML(bottom) {
     return '<p class="enh-cap-title">逃げる者と追う者の移動戦略</p>' +
-      '<p class="enh-cap-sub">マルチタスク対処方策の探求</p>' +
+      '<p class="enh-cap-sub">生物のマルチタスク対処能力の解明に向けて</p>' +
       '<p class="enh-cap-text">' + bottom + '</p>';
   }
   function updateCaption() {
@@ -219,6 +219,19 @@
         gestureCapture = false;
         dbg.cap = false;
       }, { passive: true });
+    } else {
+      // PC: 固定ナビ(z-index:10)が iframe(z-index:5)を覆う帯では mousemove が
+      // iframe に届かず照準が凍結する。親 window で拾って iframe 座標系に変換し
+      // 注入することで、ブラウザウィンドウ内全域でカーソル追従させる。
+      // iframe 直上では自前リスナーと二重に届くが、同座標の代入なので無害。
+      window.addEventListener('mousemove', function (e) {
+        if (dbg.mOp <= 0.1) return; // 演出が見えていない間は転送しない
+        var w = missileFrame && missileFrame.contentWindow;
+        if (!w || !w.__missileInput) return;
+        var r = missileFrame.getBoundingClientRect();
+        w.__missileInput.move(e.clientX - r.left, e.clientY - r.top);
+        dbg.fw++;
+      });
     }
   }
 
