@@ -329,8 +329,17 @@
     return norm( addv( addv( mulv(r, v.x), mulv(u, v.y) ), mulv(f, v.z) ) );
   }
   function targetFromOffset(ox,oy){
-    const dir = worldDirFromScreenOffset(ox,oy);
-    return {x:cam.x + dir.x*TARGET_DIST, y:cam.y + dir.y*TARGET_DIST, z:cam.z + dir.z*TARGET_DIST};
+    // project() の厳密な逆変換(ox,oy は画面中心 W/2,H/2 からのオフセット)。
+    // 旧実装はピンホール型+中心0.45Hで、project()(FOV/(FOV+cz)型+中心0.5H)と
+    // 食い違い、描画ターゲットが常にカーソルの36〜50px下にずれていた
+    // (画面上端に照準を置いてもナビ帯の下までしか上がれない実害)。
+    const {f,r,u} = camAxes();
+    const cz = TARGET_DIST;
+    const s = FOV/(FOV+cz);
+    const cx = ox/s, cy = oy/s;
+    return {x: cam.x + r.x*cx + u.x*cy + f.x*cz,
+            y: cam.y + r.y*cx + u.y*cy + f.y*cz,
+            z: cam.z + r.z*cx + u.z*cy + f.z*cz};
   }
   function dist3(ax,ay,az,bx,by,bz){ return Math.hypot(ax-bx, ay-by, az-bz); }
 
@@ -929,7 +938,9 @@
     }
     const clampedX = Math.max(0, Math.min(W, rawX));
     const clampedY = Math.max(0, Math.min(H, rawY));
-    const offX = clampedX - centerX, offY = clampedY - centerY;
+    // targetFromOffset は project() の逆変換なのでオフセット基準は投影中心
+    // (W/2, H/2)。centerX/centerY(0.45H)はタッチ操作のアンカーとしてのみ使う。
+    const offX = clampedX - W*0.5, offY = clampedY - H*0.5;
     const T = targetFromOffset(offX, offY);
 
     // Camera rotation & forward movement

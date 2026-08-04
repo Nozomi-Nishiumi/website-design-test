@@ -16,7 +16,7 @@
   'use strict';
 
   // デプロイごとに更新するバージョン(キャッシュバスティング/HUD表示用)
-  var ENH_VERSION = '20260804c';
+  var ENH_VERSION = '20260804d';
 
   // ハンバーガーメニュー: 項目をタップしたら閉じる(CSSのチェックボックスを外す)。
   // 演出の有無に関係なく効かせたいので、reduced-motion の早期 return より前に置く
@@ -372,6 +372,12 @@
   measure();
   // 画像読み込み完了でタイル寸法が変わるため再計測
   window.addEventListener('load', measure);
+  // loading="lazy" の画像・動画は load 後にも読み込まれてステージ高さを変える。
+  // geo が古いままだと pS1 の対応が狂い、ミサイル演出が「不可視+入力ゲート閉」
+  // で凍結する(読み込み順の競合で断続的に実発生)。寸法変化で自己修復する。
+  if (window.ResizeObserver) {
+    new ResizeObserver(function () { measure(); }).observe(stage);
+  }
 
   // 検証用フック(自動テストから同期的に再計算・再描画を呼ぶため)
   window.__enh = { measure: measure, geo: geo, onMissileScroll: onMissileScroll };
