@@ -16,7 +16,7 @@
   'use strict';
 
   // デプロイごとに更新するバージョン(キャッシュバスティング/HUD表示用)
-  var ENH_VERSION = '20260804a';
+  var ENH_VERSION = '20260804b';
 
   // ハンバーガーメニュー: 項目をタップしたら閉じる(CSSのチェックボックスを外す)。
   // 演出の有無に関係なく効かせたいので、reduced-motion の早期 return より前に置く
@@ -110,7 +110,7 @@
 
   // デバッグHUD: URL に ?debug=1 を付けると実機の内部状態を画面に表示する
   var DEBUG = /[?&]debug=1/.test(location.search);
-  var dbg = { relay: 0, lastDy: 0, pS1: 0, mOp: 0, fw: 0, lt: 0, cap: false, wd: 0, bg: false, ifr: null };
+  var dbg = { relay: 0, lastDy: 0, pS1: 0, mOp: 0, fw: 0, fwX: 0, fwY: 0, lt: 0, cap: false, wd: 0, bg: false, ifr: null };
   updateCaption(); // 初期表示
   var hud = null;
   if (DEBUG) {
@@ -143,7 +143,8 @@
         ' pS1:' + dbg.pS1.toFixed(2) + ' mOp:' + dbg.mOp.toFixed(2) +
         ' PE:' + (missileFrame ? missileFrame.style.pointerEvents : '-') +
         '\n親: relay受信:' + dbg.relay + ' lastDy:' + dbg.lastDy +
-        ' 注入:' + dbg.fw + ' 層受信:' + dbg.lt + ' 捕捉:' + dbg.cap +
+        ' 注入:' + dbg.fw + ' fw座標:' + (dbg.fwX || 0) + ',' + (dbg.fwY || 0) +
+        ' 層受信:' + dbg.lt + ' 捕捉:' + dbg.cap +
         '\n診断: docH:' + Math.round(document.scrollingElement.scrollHeight) +
         ' iH:' + window.innerHeight +
         ' stageEnd:' + Math.round(stage.offsetTop + stage.offsetHeight) +
@@ -224,14 +225,19 @@
       // iframe に届かず照準が凍結する。親 window で拾って iframe 座標系に変換し
       // 注入することで、ブラウザウィンドウ内全域でカーソル追従させる。
       // iframe 直上では自前リスナーと二重に届くが、同座標の代入なので無害。
-      window.addEventListener('mousemove', function (e) {
+      // capture:true で途中の stopPropagation に影響されず、mousemove と
+      // pointermove の両系統で受ける(片方が発火しない環境への保険)。
+      var forwardMouse = function (e) {
         if (dbg.mOp <= 0.1) return; // 演出が見えていない間は転送しない
         var w = missileFrame && missileFrame.contentWindow;
         if (!w || !w.__missileInput) return;
         var r = missileFrame.getBoundingClientRect();
-        w.__missileInput.move(e.clientX - r.left, e.clientY - r.top);
-        dbg.fw++;
-      });
+        var x = e.clientX - r.left, y = e.clientY - r.top;
+        w.__missileInput.move(x, y);
+        dbg.fw++; dbg.fwX = Math.round(x); dbg.fwY = Math.round(y);
+      };
+      window.addEventListener('mousemove', forwardMouse, true);
+      if (window.PointerEvent) window.addEventListener('pointermove', forwardMouse, true);
     }
   }
 
