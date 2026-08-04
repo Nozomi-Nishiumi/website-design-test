@@ -7,7 +7,7 @@ html,body{margin:0;background:#000;color:#fff;font:13px/1.5 monospace;height:100
 .bar{height:30px;line-height:30px;padding:0 12px;background:#111;color:#ccc}
 .wrap{display:flex;height:calc(100% - 30px)}
 .wrap>div{flex:1;position:relative;border-left:1px solid #333}
-iframe{width:100%;height:100%;border:0;display:block}
+iframe{width:100%;height:100%;border:0;display:block;pointer-events:none}
 h2{position:absolute;top:8px;left:12px;z-index:2;margin:0;font-size:14px;color:#ffd98a;text-shadow:0 1px 4px #000;pointer-events:none}
 </style></head><body>
 <div class="bar">カーソル移動は左右両パネルに同時注入(相対座標)。クリック(カメラ切替)はカーソルが乗っている側のみ。</div>
@@ -16,16 +16,31 @@ h2{position:absolute;top:8px;left:12px;z-index:2;margin:0;font-size:14px;color:#
   <div><h2>現行(20260805a)</h2><iframe id="b" src="missile.html?v=20260805a"></iframe></div>
 </div>
 <script>
-addEventListener('mousemove', function (e) {
+// iframe は pointer-events:none。全マウスイベントを親で受けて注入する
+// (iframe上では親にmousemoveが届かないため、この方式でないと同時注入できない)。
+function panels(){
   var fa = document.getElementById('a'), fb = document.getElementById('b');
-  var ra = fa.getBoundingClientRect(), rb = fb.getBoundingClientRect();
-  var ref = (e.clientX >= rb.left) ? rb : ra; // カーソルが乗っている側を基準に相対座標化
+  return [[fa, fa.getBoundingClientRect()], [fb, fb.getBoundingClientRect()]];
+}
+function refOf(e, ps){ return (e.clientX >= ps[1][1].left) ? ps[1][1] : ps[0][1]; }
+addEventListener('mousemove', function (e) {
+  var ps = panels(), ref = refOf(e, ps);
   var relX = (e.clientX - ref.left) / ref.width;
   var relY = (e.clientY - ref.top) / ref.height;
-  [[fa, ra], [fb, rb]].forEach(function (p) {
+  ps.forEach(function (p) {
     var w = p[0].contentWindow, r = p[1];
     if (w && w.__missileInput) w.__missileInput.move(relX * r.width, relY * r.height);
   });
 }, true);
+function fwdClick(fn){
+  return function (e) {
+    var ps = panels();
+    var p = (e.clientX >= ps[1][1].left) ? ps[1] : ps[0]; // カーソルが乗っている側のみ
+    var w = p[0].contentWindow, r = p[1];
+    if (w && w.__missileInput) w.__missileInput[fn](e.clientX - r.left, e.clientY - r.top);
+  };
+}
+addEventListener('mousedown', fwdClick('down'), true);
+addEventListener('mouseup', fwdClick('up'), true);
 </script>
 </body></html>
