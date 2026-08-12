@@ -316,14 +316,25 @@ html.enh .enh-cap-sub {
   color: #ffd98a;
   text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
 }
-/* 接続状態ピクトグラム(cap-text の上)。connected/not_connected は元画像の
-   縦横比が僅かに違うため、同一の固定ボックス+contain で大きさ・位置を揃える */
-html.enh .enh-cap-drone {
+/* 接続状態ピクトグラムのレイアウト確保用スペーサー(キャプション内) */
+html.enh .enh-cap-drone-space {
   display: inline-block;
   width: 136px;
   height: 37px;
-  object-fit: contain;
   margin: 10px 0 6px;
+}
+/* ピクトグラム本体: sticky 直下の独立レイヤー(キャプション内に置くと
+   opacity/z-index のスタッキングコンテキストで mix-blend-mode が隔離され
+   背景と合成できないため)。位置は JS がスペーサーに同期させる。
+   connected/not_connected は縦横比が僅かに違うため同一ボックス+contain。 */
+html.enh .enh-cap-drone-layer {
+  position: absolute;
+  z-index: 8;
+  width: 136px;
+  height: 37px;
+  object-fit: contain;
+  opacity: 0;
+  pointer-events: none;
 }
 /* 未接続: 黒ピクトグラム → 不透明の明るめ灰色 */
 html.enh .enh-cap-drone--off {
