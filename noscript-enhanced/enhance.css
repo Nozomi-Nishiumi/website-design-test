@@ -290,7 +290,11 @@ html.enh .enh-missile-caption {
   z-index: 7;
   right: 24px;
   bottom: 72px;
-  text-align: right;
+  /* 幅を固定: 状態行の文字数変化でブロック幅が変わると、中央揃えの基準が
+     ずれてピクトグラムの位置が状態間で数px動いてしまうため */
+  width: 212px;
+  text-align: center; /* タイトル・サブ・ピクトグラム・状態行を相互に中央揃え */
+  white-space: nowrap;
   opacity: 0;
   pointer-events: none;
 }
@@ -305,16 +309,20 @@ html.enh .enh-cap-title {
 /* タイトル2行目(サブタイトル): 大きさは cap-text と同じ、色はタイトルと同じ */
 html.enh .enh-cap-sub {
   margin: 0 0 2px;
-  font-size: 12px;
+  /* タイトル(15px×13文字)と同じ行幅になるよう 15×13/20文字 = 9.75px */
+  font-size: 9.75px;
   font-weight: 700;
   font-family: 'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', serif;
   color: #ffd98a;
   text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
 }
-/* 接続状態ピクトグラム(cap-text の上) */
+/* 接続状態ピクトグラム(cap-text の上)。connected/not_connected は元画像の
+   縦横比が僅かに違うため、同一の固定ボックス+contain で大きさ・位置を揃える */
 html.enh .enh-cap-drone {
   display: inline-block;
   width: 136px;
+  height: 37px;
+  object-fit: contain;
   margin: 10px 0 6px;
 }
 /* 未接続: 黒ピクトグラム → 不透明の明るめ灰色 */
