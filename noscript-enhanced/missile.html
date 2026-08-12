@@ -534,6 +534,32 @@
     up:   function(x, y){ onUp({changedTouches:[{clientX:x, clientY:y}]}); }
   };
 
+  // 親ページのキャプション用: 接続中ピクトグラムを canvas 内で screen 合成して
+  // 描く(DOM の mix-blend-mode は Safari では iframe 越しの背景に適用されない
+  // ため、同一 canvas 内で合成するのが唯一確実な方法)。座標・透明度・状態は
+  // 親がスペーサー要素の位置から同期してくる。
+  const capBadge = {x: 0, y: 0, w: 0, h: 0, alpha: 0, on: false};
+  window.__capBadge = function (x, y, w, h, alpha, on) {
+    capBadge.x = x; capBadge.y = y; capBadge.w = w; capBadge.h = h;
+    capBadge.alpha = alpha; capBadge.on = !!on;
+  };
+  let capTinted = null;
+  {
+    const selfV = (location.search.match(/[?&]v=([^&]+)/) || [])[1] || '';
+    const im = new Image();
+    im.onload = function () {
+      const oc = document.createElement('canvas');
+      oc.width = im.width; oc.height = im.height;
+      const c = oc.getContext('2d');
+      c.drawImage(im, 0, 0);
+      c.globalCompositeOperation = 'source-atop'; // 絵柄のアルファを保ったまま着色
+      c.fillStyle = '#ffd98a';                    // タイトル文字色と同じ黄金色
+      c.fillRect(0, 0, oc.width, oc.height);
+      capTinted = oc;
+    };
+    im.src = 'images/drone_connected.png' + (selfV ? '?v=' + selfV : '');
+  }
+
   cv.addEventListener('touchstart', onDown, {passive:true});
   cv.addEventListener('touchmove',  onMove, {passive:false});
   cv.addEventListener('touchend',   onUp,   {passive:true});
@@ -1078,6 +1104,19 @@
     }
 
     ctx.globalCompositeOperation = prev;
+
+    // 接続中ピクトグラム(親キャプションの一部): screen 合成で背景に焼き込む。
+    // object-fit:contain 相当で同期されたボックスに収める。
+    if (capBadge.on && capBadge.alpha > 0.01 && capTinted) {
+      const bs = Math.min(capBadge.w / capTinted.width, capBadge.h / capTinted.height);
+      const bw = capTinted.width * bs, bh = capTinted.height * bs;
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      ctx.globalAlpha = capBadge.alpha;
+      ctx.drawImage(capTinted,
+        capBadge.x + (capBadge.w - bw) / 2, capBadge.y + (capBadge.h - bh) / 2, bw, bh);
+      ctx.restore();
+    }
 
     dbgStat.raf++;
     requestAnimationFrame(step);

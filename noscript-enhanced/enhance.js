@@ -16,7 +16,7 @@
   'use strict';
 
   // デプロイごとに更新するバージョン(キャッシュバスティング/HUD表示用)
-  var ENH_VERSION = '20260813c';
+  var ENH_VERSION = '20260813d';
 
   // ハンバーガーメニュー: 項目をタップしたら閉じる(CSSのチェックボックスを外す)。
   // 演出の有無に関係なく効かせたいので、reduced-motion の早期 return より前に置く
@@ -113,18 +113,32 @@
     droneImg.style.left = Math.round(r.left - s.left) + 'px';
     droneImg.style.top = Math.round(r.top - s.top) + 'px';
   }
+  // 接続中ピクトグラムは missile.html の canvas 内で screen 合成して描く
+  // (Safari は iframe 越しの mix-blend-mode を合成しないため)。
+  // スペーサーの位置・大きさ・透明度・状態を iframe へ同期する。
+  function syncBadge(mOp) {
+    var w = missileFrame && missileFrame.contentWindow;
+    if (!w || !w.__capBadge) return;
+    var space = caption.querySelector('.enh-cap-drone-space');
+    if (!space) return;
+    var r = space.getBoundingClientRect();
+    var f = missileFrame.getBoundingClientRect();
+    w.__capBadge(r.left - f.left, r.top - f.top, r.width, r.height, mOp, dbg.bg);
+  }
   function updateCaption() {
     caption.innerHTML = captionHTML(
       dbg.bg ? 'ドローンカメラ接続中' : '画面クリックでドローンカメラに接続'
     );
     if (dbg.bg) {
-      droneImg.src = 'images/drone_connected.png?v=' + ENH_VERSION;
-      droneImg.className = 'enh-cap-drone-layer enh-cap-drone--on';
+      // 接続中: DOM側は隠し、canvas内の screen 合成描画に任せる
+      droneImg.style.visibility = 'hidden';
     } else {
       droneImg.src = 'images/drone_not_connected.png?v=' + ENH_VERSION;
       droneImg.className = 'enh-cap-drone-layer enh-cap-drone--off';
+      droneImg.style.visibility = '';
     }
     positionDrone();
+    syncBadge(dbg.mOp);
   }
   sticky.appendChild(caption);
   sticky.appendChild(droneImg);
@@ -383,6 +397,7 @@
     }
     caption.style.opacity = mOp;
     droneImg.style.opacity = mOp;
+    syncBadge(mOp);
   }
 
   function onScroll() {
