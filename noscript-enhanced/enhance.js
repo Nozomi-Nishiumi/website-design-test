@@ -16,7 +16,7 @@
   'use strict';
 
   // デプロイごとに更新するバージョン(キャッシュバスティング/HUD表示用)
-  var ENH_VERSION = '20260805a';
+  var ENH_VERSION = '20260812a';
 
   // ハンバーガーメニュー: 項目をタップしたら閉じる(CSSのチェックボックスを外す)。
   // 演出の有無に関係なく効かせたいので、reduced-motion の早期 return より前に置く
@@ -89,10 +89,17 @@
   var caption = document.createElement('div');
   caption.className = 'enh-missile-caption';
   function captionHTML(bottom) {
+    // 接続状態ピクトグラム: 未接続=黒絵柄を灰色表示 / 接続中=白絵柄を黄色味+加算合成
+    var drone = dbg.bg
+      ? '<img class="enh-cap-drone enh-cap-drone--on" src="images/drone_connected.png?v=' + ENH_VERSION + '" alt="ドローン接続中">'
+      : '<img class="enh-cap-drone enh-cap-drone--off" src="images/drone_not_connected.png?v=' + ENH_VERSION + '" alt="ドローン未接続">';
     return '<p class="enh-cap-title">逃げる者と追う者の移動戦略</p>' +
       '<p class="enh-cap-sub">生物のマルチタスク対処能力の解明に向けて</p>' +
+      drone +
       '<p class="enh-cap-text">' + bottom + '</p>';
   }
+  // 切替時のちらつき防止: 接続中版を先読みしておく
+  new Image().src = 'images/drone_connected.png?v=' + ENH_VERSION;
   function updateCaption() {
     caption.innerHTML = captionHTML(
       dbg.bg ? 'ドローンカメラ接続中' : '画面クリックでドローンカメラに接続'

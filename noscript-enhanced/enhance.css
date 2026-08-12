@@ -298,6 +298,7 @@ html.enh .enh-cap-title {
   margin: 0 0 2px;
   font-size: 15px;
   font-weight: 700;
+  font-family: 'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', serif;
   color: #ffd98a;
   text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
 }
@@ -306,8 +307,27 @@ html.enh .enh-cap-sub {
   margin: 0 0 2px;
   font-size: 12px;
   font-weight: 700;
+  font-family: 'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', serif;
   color: #ffd98a;
   text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
+}
+/* 接続状態ピクトグラム(cap-text の上) */
+html.enh .enh-cap-drone {
+  display: inline-block;
+  width: 170px;
+  margin: 10px 0 6px;
+}
+/* 未接続: 黒ピクトグラム → 不透明の明るめ灰色 */
+html.enh .enh-cap-drone--off {
+  filter: invert(0.8);
+}
+/* 接続中: 白ピクトグラム → 黄色味を加えて背景に加算合成で明るく */
+html.enh .enh-cap-drone--on {
+  filter: sepia(0.6) saturate(2) brightness(1.2);
+  mix-blend-mode: screen;
+}
+@supports (mix-blend-mode: plus-lighter) {
+  html.enh .enh-cap-drone--on { mix-blend-mode: plus-lighter; }
 }
 html.enh .enh-cap-text {
   margin: 0;
