@@ -329,14 +329,11 @@ html.enh .enh-cap-drone {
 html.enh .enh-cap-drone--off {
   filter: invert(0.8);
 }
-/* 接続中: 白ピクトグラム → タイトル文字色(#ffd98a)相当の黄金色にして加算合成
+/* 接続中: 白ピクトグラム → タイトル文字色(#ffd98a)相当の黄金色にして screen 合成
    (白のままsepiaをかけるとクランプでほぼ白に戻るため、先に明度を落とす) */
 html.enh .enh-cap-drone--on {
   filter: brightness(0.72) sepia(1) saturate(1.6);
   mix-blend-mode: screen;
-}
-@supports (mix-blend-mode: plus-lighter) {
-  html.enh .enh-cap-drone--on { mix-blend-mode: plus-lighter; }
 }
 html.enh .enh-cap-text {
   margin: 0;
