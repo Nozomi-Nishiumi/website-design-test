@@ -314,16 +314,17 @@ html.enh .enh-cap-sub {
 /* 接続状態ピクトグラム(cap-text の上) */
 html.enh .enh-cap-drone {
   display: inline-block;
-  width: 170px;
+  width: 136px;
   margin: 10px 0 6px;
 }
 /* 未接続: 黒ピクトグラム → 不透明の明るめ灰色 */
 html.enh .enh-cap-drone--off {
   filter: invert(0.8);
 }
-/* 接続中: 白ピクトグラム → 黄色味を加えて背景に加算合成で明るく */
+/* 接続中: 白ピクトグラム → タイトル文字色(#ffd98a)相当の黄金色にして加算合成
+   (白のままsepiaをかけるとクランプでほぼ白に戻るため、先に明度を落とす) */
 html.enh .enh-cap-drone--on {
-  filter: sepia(0.6) saturate(2) brightness(1.2);
+  filter: brightness(0.72) sepia(1) saturate(1.6);
   mix-blend-mode: screen;
 }
 @supports (mix-blend-mode: plus-lighter) {
