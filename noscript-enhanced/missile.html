@@ -69,11 +69,6 @@
       core: a=>`rgba(255,230,180,${a * 1.2})`,
       halo: a=>`rgba(255,190,120,${a * 1.1})`,
       line: '255,200,140'
-    },
-    missileApn:{
-      core: a=>`rgba(255,170,150,${a * 1.2})`,
-      halo: a=>`rgba(255,90,70,${a * 1.1})`,
-      line: '255,110,90'
     }
   };
 
@@ -1033,7 +1028,7 @@
     for(let i=0;i<MISSILE_COUNT;i++){
       if(!missiles[i]) missiles[i] = spawnMissile(i, 0);
       const m = missiles[i];
-      const pal = m.apn ? palette.missileApn : palette.missile;  // APN機は赤
+      const pal = palette.missile;  // PN/APNとも同色
 
       // Waiting to respawn: draw fading trail only, skip physics
       if(m.respawnAt){
@@ -1107,7 +1102,7 @@
 
       // Hit/behind/too far → set respawn delay, skip to next frame
       if(hit || cz < -RESPAWN_BACK || dToCam > MAX_RANGE){
-        if(hit) spawnExplosion({x:m.pos.x,y:m.pos.y,z:m.pos.z}, now, m.apn ? 'missileApn' : 'missile');
+        if(hit) spawnExplosion({x:m.pos.x,y:m.pos.y,z:m.pos.z}, now, 'missile');
         m.respawnAt = now + Math.random();
         m.gen = (m.gen||0) + 1;
         continue;
