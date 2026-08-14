@@ -60,7 +60,7 @@
   // ターゲット速度・加速度グラフ(画面下部に左右並置): 横軸=時間(直近10s)、
   // 縦軸=|v_T| [m/s] / |a_T| [m/s²]。座標の差分の生値(EMA平滑化前)をそのまま描く。
   // 縦軸は固定スケール(オートスケールなし)、超過分は上端でクリップ
-  const ACC_GRAPH_WINDOW = 10, ACC_GRAPH_H = 60, ACC_GRAPH_MX = 20, ACC_GRAPH_MB = 12, ACC_GRAPH_GAP = 16;
+  const ACC_GRAPH_WINDOW = 3, ACC_GRAPH_H = 60, ACC_GRAPH_MX = 20, ACC_GRAPH_MB = 12, ACC_GRAPH_GAP = 16;
   const ACC_GRAPH_YMAX = 20000;
   const SPD_GRAPH_YMAX = 500;
   // 仮想空間の物理スケール: 追跡ドローン(カメラ)の飛行速度を 40 m/s
