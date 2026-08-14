@@ -409,6 +409,10 @@
       dbgStat.ts++;
       // タッチ: ここでは切り替えない(タップかドラッグかは touchend で確定)
       tapStart = {x:t.clientX, y:t.clientY, t:Date.now(), moved:false};
+      // 最初の touchmove の dx は捨てる: touchstart→初回 move の空白期間
+      // (タッチ検出遅延)に指が動いた分が一括計上され、1フレームの
+      // 速度スパイク(実測で正常時の4倍超)になるため
+      pointer.firstMove = true;
       return;
     }
     if(Date.now() - lastTouchEnd < 700) return; // タップ直後の合成 mousedown を無視
@@ -483,6 +487,15 @@
       if(e.touches && !tapStart.moved &&
          Math.hypot(t.clientX - tapStart.x, t.clientY - tapStart.y) > 12){
         tapStart.moved = true; // 12px以上動いたらドラッグ(タップではない)
+      }
+      // 初回 touchmove: 蓄積分を照準に入れず基準座標の更新のみ
+      // (preventDefault は必要——ここで抑止しないとスワイプ全体をブラウザが接収する)
+      if (pointer.firstMove) {
+        pointer.firstMove = false;
+        if (e.cancelable) { e.preventDefault(); dbgStat.pd++; }
+        pointer.lastX = t.clientX;
+        pointer.lastY = t.clientY;
+        return;
       }
       const dx = t.clientX - pointer.lastX;
       const dy = t.clientY - pointer.lastY;
