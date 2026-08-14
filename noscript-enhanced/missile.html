@@ -56,9 +56,17 @@
   const MISSILE_COUNT = 4, PN_GAIN = 3.4, MAX_TURN_RATE = 3.2;
   // APN(増強比例航法): 増強項ゲイン N/2、増強項の旋回率寄与上限、目標加速度EMAの応答率
   const APN_AUG_GAIN = PN_GAIN * 0.5, APN_AUG_CAP = MAX_TURN_RATE * 0.5, APN_ACC_EMA = 8;
-  // ターゲット加速度グラフ(画面下部): 横軸=時間(直近10s)、縦軸=|a_T|。
-  // 座標の二階差分の生値(EMA平滑化前)をそのまま描く
+  // ターゲット加速度グラフ(画面下部): 横軸=時間(直近10s)、縦軸=|a_T| [m/s²]。
+  // 座標の二階差分の生値(EMA平滑化前)をそのまま描く。
+  // 縦軸は固定スケール 0〜ACC_GRAPH_YMAX(オートスケールなし)、超過分は上端でクリップ
   const ACC_GRAPH_WINDOW = 10, ACC_GRAPH_H = 60, ACC_GRAPH_MX = 20, ACC_GRAPH_MB = 12;
+  // 上限は実測に基づく: 激しい8の字機動(全幅±380px, 0.8Hz)の運動学的ピークが
+  // ≈4200 m/s²。実マウスのイベント離散化スパイクは瞬間的に超えるが上端クリップで表示
+  const ACC_GRAPH_YMAX = 5000;
+  // 仮想空間の物理スケール: 追跡ドローン(カメラ)の飛行速度を 40 m/s
+  // (レース用FPVドローン級)と置いて世界座標単位→メートルを定義。
+  // 含意: ターゲット距離≈104m、ミサイル速度≈120m/s
+  const WORLD_M_PER_PX = 40 / CAM_FWD_PX_S;
   const HIT_RADIUS = 300, RESPAWN_BACK = 200;
 
   // Color - Additive blending colors optimized for background brightness
@@ -916,22 +924,21 @@
     const gw = W - ACC_GRAPH_MX*2, gh = ACC_GRAPH_H;
     const gx = ACC_GRAPH_MX, gy = H - ACC_GRAPH_MB - gh;
     if(gw < 80) return;
-    let aMax = 0;
-    for(let i=0;i<accHist.length;i++) if(accHist[i].a > aMax) aMax = accHist[i].a;
-    if(aMax <= 0) aMax = 1;
     ctx.save();
     ctx.fillStyle = 'rgba(0,0,0,0.35)';
     ctx.fillRect(gx, gy, gw, gh);
     ctx.strokeStyle = 'rgba(255,255,255,0.3)';
     ctx.lineWidth = 1;
     ctx.strokeRect(gx+0.5, gy+0.5, gw-1, gh-1);
-    // 1秒間隔の縦グリッド
+    // 1秒間隔の縦グリッド + 中間値(YMAX/2)の横グリッド
     ctx.strokeStyle = 'rgba(255,255,255,0.1)';
     ctx.beginPath();
     for(let s=1;s<ACC_GRAPH_WINDOW;s++){
       const x = gx + gw - (s/ACC_GRAPH_WINDOW)*gw;
       ctx.moveTo(x, gy); ctx.lineTo(x, gy+gh);
     }
+    const yMid = gy + gh - 2 - 0.5*(gh - 16);
+    ctx.moveTo(gx, yMid); ctx.lineTo(gx+gw, yMid);
     ctx.stroke();
     // 波形(ターゲットのトレイル色)
     ctx.strokeStyle = 'rgba(140,190,255,0.9)';
@@ -942,7 +949,7 @@
       const p = accHist[i];
       const x = gx + gw - ((now - p.t)/ACC_GRAPH_WINDOW)*gw;
       if(x < gx) continue;
-      const y = gy + gh - 2 - (p.a/aMax)*(gh - 16);
+      const y = gy + gh - 2 - Math.min(p.a, ACC_GRAPH_YMAX)/ACC_GRAPH_YMAX*(gh - 16);
       if(!started){ ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y);
     }
     ctx.stroke();
@@ -950,8 +957,7 @@
     ctx.fillStyle = 'rgba(255,255,255,0.65)';
     ctx.font = '10px monospace';
     ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-    const fmt = v => v>=1e6 ? (v/1e6).toFixed(1)+'e6' : v>=1e3 ? (v/1e3).toFixed(1)+'e3' : v.toFixed(0);
-    ctx.fillText('|a_T| px/s²  max '+fmt(aMax), gx+6, gy+4);
+    ctx.fillText('|a_T| m/s²  [0-'+ACC_GRAPH_YMAX+']', gx+6, gy+4);
     ctx.textAlign = 'right';
     ctx.fillText('← '+ACC_GRAPH_WINDOW+'s', gx+gw-6, gy+4);
     ctx.restore();
@@ -1043,8 +1049,8 @@
         const aRaw = mulv(sub(vNow, tgtVel), 1/dt);
         const k = Math.min(1, dt * APN_ACC_EMA);
         tgtAcc = addv(mulv(tgtAcc, 1-k), mulv(aRaw, k));
-        // グラフ用に生値を記録
-        accHist.push({t: now, a: len(aRaw)});
+        // グラフ用に生値を記録(仮想空間のm/s²に換算)
+        accHist.push({t: now, a: len(aRaw) * WORLD_M_PER_PX});
         while (accHist.length && now - accHist[0].t > ACC_GRAPH_WINDOW + 0.5) accHist.shift();
       }
       tgtVel = vNow;
