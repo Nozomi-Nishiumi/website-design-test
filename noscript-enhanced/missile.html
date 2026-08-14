@@ -52,30 +52,20 @@
   const ALPHA_MAX = 0.65, ALPHA_MIN = 0.03, ALPHA_CUTOFF = 0.015; // 透明度を上げて見やすく
   const SIZE_MIN = 1.0, SIZE_MAX = 14.0, SIZE_K = 1800; // サイズも少し大きく
 
-  // 仮想空間の物理スケール: 追跡ドローン(カメラ)の飛行速度を 40 m/s
-  // (レース用FPVドローン級)と置いて世界座標単位→メートルを定義。
-  // 含意: ターゲット距離≈104m、ミサイル速度≈120m/s
-  const WORLD_M_PER_PX = 40 / CAM_FWD_PX_S;
-  // Missile: 操舵は横加速度上限で制限(旋回率でなく)。384 m/s² は
-  // 旧上限 MAX_TURN_RATE 3.2 rad/s × Vm(120m/s) と等価 = 挙動保存
-  const MISSILE_COUNT = 4, PN_GAIN = 3.4;
-  const MISSILE_ACC_MAX = 384;  // m/s²
-  const MISSILE_TURN_MAX = MISSILE_ACC_MAX / WORLD_M_PER_PX / MISSILE_SPEED;  // = 3.2 rad/s
+  // Missile
+  const MISSILE_COUNT = 4, PN_GAIN = 3.4, MAX_TURN_RATE = 3.2;
   // APN(増強比例航法): 増強項ゲイン N/2、増強項の旋回率寄与上限、目標加速度EMAの応答率
-  const APN_AUG_GAIN = PN_GAIN * 0.5, APN_AUG_CAP = MISSILE_TURN_MAX * 0.5, APN_ACC_EMA = 8;
-  // ターゲットはカーソル指示点(カメラ球面上)への位置追従スルー方式(20260814fで
-  // 確認済みの制御)のまま、角速度上限 TGT_SLEW_MAX に加えて角加速度上限
-  // TGT_ALPHA(ミサイルと同一の384 m/s²相当)でスルーレートの変化を制限する。
-  // 移動ステップは残角θを超えない=行き過ぎなし。指示点に到達したら停止
-  const TGT_SLEW_MAX = 2.5;                 // rad/s (球面弧速度 ≈260 m/s)
-  const TGT_ACC_MAX = MISSILE_ACC_MAX;      // m/s² (=384、ミサイルと同一)
-  const TGT_ALPHA = TGT_ACC_MAX / WORLD_M_PER_PX / TARGET_DIST;  // 角加速度 ≈3.7 rad/s²
+  const APN_AUG_GAIN = PN_GAIN * 0.5, APN_AUG_CAP = MAX_TURN_RATE * 0.5, APN_ACC_EMA = 8;
   // ターゲット速度・加速度グラフ(画面下部に左右並置): 横軸=時間(直近10s)、
   // 縦軸=|v_T| [m/s] / |a_T| [m/s²]。座標の差分の生値(EMA平滑化前)をそのまま描く。
   // 縦軸は固定スケール(オートスケールなし)、超過分は上端でクリップ
   const ACC_GRAPH_WINDOW = 10, ACC_GRAPH_H = 60, ACC_GRAPH_MX = 20, ACC_GRAPH_MB = 12, ACC_GRAPH_GAP = 16;
   const ACC_GRAPH_YMAX = 20000;
   const SPD_GRAPH_YMAX = 500;
+  // 仮想空間の物理スケール: 追跡ドローン(カメラ)の飛行速度を 40 m/s
+  // (レース用FPVドローン級)と置いて世界座標単位→メートルを定義。
+  // 含意: ターゲット距離≈104m、ミサイル速度≈120m/s
+  const WORLD_M_PER_PX = 40 / CAM_FWD_PX_S;
   const HIT_RADIUS = 300, RESPAWN_BACK = 200;
 
   // Color - Additive blending colors optimized for background brightness
@@ -859,9 +849,6 @@
 
   // APN用: 目標加速度の推定値(有限差分+EMA平滑化)。カーソル入力は衝撃的なので生の二階差分は使わない
   let tgtPrev = null, tgtVel = null, tgtAcc = {x:0,y:0,z:0};
-  // ターゲットのカメラ相対方向(単位ベクトル、カメラ基底{r,u,f}成分)と
-  // 現在のスルーレート(スカラー, rad/s)。位置追従スルー+加速度制限用
-  let tgtDirCam = null, tgtSlewRate = 0;
   // グラフ用: 生の|a_T|・|v_T|履歴 {t, a}
   const accHist = [], spdHist = [];
 
@@ -1045,23 +1032,6 @@
     fadeAccum += a;
     if (fadeAccum > 1.05) { fctx.clearRect(0,0,W,H); fadeAccum = 0; }
 
-    // Camera rotation & forward movement — ターゲット計算より先に行う。
-    // (旧: ターゲット計算の後だったため、位置差分グラフの分母dtと位置に反映済みの
-    //  カメラ移動のdtが1フレームずれ、フレーム間隔が揺れる環境で速度・加速度の
-    //  見かけのジッタを生んでいた。操舵は前フレームのT(tgtPrev)を参照——
-    //  60fpsで16msの遅れ、操舵時定数~1.7sに対し無視できる)
-    if (tgtPrev) {
-      const {yawRate, pitchRate} = steerCameraToward(tgtPrev);
-      cam.yaw   += yawRate   * dt;
-      cam.pitch  = clamp(cam.pitch + pitchRate * dt, PITCH_MIN, PITCH_MAX);
-    }
-    if(running){
-      const {f} = camAxes();
-      cam.x += f.x * CAM_FWD_PX_S * dt;
-      cam.y += f.y * CAM_FWD_PX_S * dt;
-      cam.z += f.z * CAM_FWD_PX_S * dt;
-    }
-
     // Target position
     const centerX = W * 0.5, centerY = H * 0.45;
     let rawX, rawY;
@@ -1076,37 +1046,7 @@
     // targetFromOffset は project() の逆変換なのでオフセット基準は投影中心
     // (W/2, H/2)。centerX/centerY(0.45H)はタッチ操作のアンカーとしてのみ使う。
     const offX = clampedX - W*0.5, offY = clampedY - H*0.5;
-    const Tdes = targetFromOffset(offX, offY);
-
-    // 位置追従スルー(20260814f確認済みの方式)+加速度制限: カーソル指示方向
-    // dDes へ大円上を回す。所要レート min(TGT_SLEW_MAX, θ/dt) を指令とし、
-    // スルーレートの変化を角加速度上限 TGT_ALPHA で制限。ステップは残角θを
-    // 超えない=行き過ぎなし、到達したら張り付いて停止
-    {
-      const {r,u,f} = camAxes();
-      const rel = sub(Tdes, {x:cam.x, y:cam.y, z:cam.z});
-      const dDes = norm({x: dot(rel,r), y: dot(rel,u), z: dot(rel,f)});
-      if (!tgtDirCam) {
-        tgtDirCam = dDes;
-      } else {
-        const theta = Math.acos(clamp(dot(tgtDirCam, dDes), -1, 1));
-        const wDes = Math.min(TGT_SLEW_MAX, (dt > 1e-4) ? theta/dt : 0);
-        const dvMax = TGT_ALPHA * Math.min(dt, 0.1);
-        tgtSlewRate += clamp(wDes - tgtSlewRate, -dvMax, dvMax);
-        const step = Math.min(tgtSlewRate * dt, theta);
-        if (theta <= 1e-7) {
-          tgtDirCam = dDes;
-        } else if (step > 1e-7) {
-          const axis = cross(tgtDirCam, dDes);
-          tgtDirCam = (len(axis) > 1e-9)
-            ? norm(rotateAroundAxis(tgtDirCam, axis, step))
-            : dDes;
-        }
-      }
-      var T = addv({x:cam.x, y:cam.y, z:cam.z},
-                   mulv(addv(addv(mulv(r, tgtDirCam.x), mulv(u, tgtDirCam.y)), mulv(f, tgtDirCam.z)),
-                        TARGET_DIST));
-    }
+    const T = targetFromOffset(offX, offY);
 
     // 目標加速度推定(APN増強項用)。dt異常時(タブ復帰等)は推定をリセット
     if (tgtPrev && dt > 1e-4 && dt < 0.1) {
@@ -1127,6 +1067,17 @@
       tgtVel = null; tgtAcc = {x:0,y:0,z:0};
     }
     tgtPrev = T;
+
+    // Camera rotation & forward movement
+    const {yawRate, pitchRate} = steerCameraToward(T);
+    cam.yaw   += yawRate   * dt;
+    cam.pitch  = clamp(cam.pitch + pitchRate * dt, PITCH_MIN, PITCH_MAX);
+    if(running){
+      const {f} = camAxes();
+      cam.x += f.x * CAM_FWD_PX_S * dt;
+      cam.y += f.y * CAM_FWD_PX_S * dt;
+      cam.z += f.z * CAM_FWD_PX_S * dt;
+    }
 
     // Target trail
     lastTgt = pushTrail(tgtTrail, lastTgt, T, now, 0);
@@ -1181,13 +1132,13 @@
         if(wAugMag > APN_AUG_CAP) wAug = mulv(wAug, APN_AUG_CAP/wAugMag);
         omega = addv(omega, wAug);
         const wMag = len(omega);
-        if(wMag>1e-8) m.vdir = norm( rotateAroundAxis(m.vdir, omega, Math.min(MISSILE_TURN_MAX, wMag)*dt) );
+        if(wMag>1e-8) m.vdir = norm( rotateAroundAxis(m.vdir, omega, Math.min(MAX_TURN_RATE, wMag)*dt) );
         else{
-          const blend = Math.min(1, Math.min(MISSILE_TURN_MAX, PN_GAIN*w_los)*dt);
+          const blend = Math.min(1, Math.min(MAX_TURN_RATE, PN_GAIN*w_los)*dt);
           m.vdir = norm( addv( mulv(m.vdir,1-blend), mulv(u,blend) ) );
         }
       }else{
-        const turnRate = Math.min(MISSILE_TURN_MAX, PN_GAIN*w_los);
+        const turnRate = Math.min(MAX_TURN_RATE, PN_GAIN*w_los);
         const turnAngle = turnRate*dt;
         if(len(axis)>1e-8) m.vdir = norm( rotateAroundAxis(m.vdir, axis, turnAngle) );
         else{
