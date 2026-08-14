@@ -56,6 +56,9 @@
   const MISSILE_COUNT = 4, PN_GAIN = 3.4, MAX_TURN_RATE = 3.2;
   // APN(増強比例航法): 増強項ゲイン N/2、増強項の旋回率寄与上限、目標加速度EMAの応答率
   const APN_AUG_GAIN = PN_GAIN * 0.5, APN_AUG_CAP = MAX_TURN_RATE * 0.5, APN_ACC_EMA = 8;
+  // ターゲット加速度グラフ(画面下部): 横軸=時間(直近10s)、縦軸=|a_T|。
+  // 座標の二階差分の生値(EMA平滑化前)をそのまま描く
+  const ACC_GRAPH_WINDOW = 10, ACC_GRAPH_H = 60, ACC_GRAPH_MX = 20, ACC_GRAPH_MB = 12;
   const HIT_RADIUS = 300, RESPAWN_BACK = 200;
 
   // Color - Additive blending colors optimized for background brightness
@@ -839,6 +842,8 @@
 
   // APN用: 目標加速度の推定値(有限差分+EMA平滑化)。カーソル入力は衝撃的なので生の二階差分は使わない
   let tgtPrev = null, tgtVel = null, tgtAcc = {x:0,y:0,z:0};
+  // グラフ用: 生の|a_T|履歴 {t, a}
+  const accHist = [];
 
   // ===== Explosion =====
   const expl = [];
@@ -903,6 +908,54 @@
   // ===== Loop =====
   let last = performance.now();
   const tgtTrail = []; let lastTgt = null;
+
+  // ターゲット加速度グラフ(画面下部)。最新サンプルが右端、左端が-10s。
+  // 縦軸は表示窓内の最大値でオートスケール
+  function drawAccGraph(now){
+    if(accHist.length < 2) return;
+    const gw = W - ACC_GRAPH_MX*2, gh = ACC_GRAPH_H;
+    const gx = ACC_GRAPH_MX, gy = H - ACC_GRAPH_MB - gh;
+    if(gw < 80) return;
+    let aMax = 0;
+    for(let i=0;i<accHist.length;i++) if(accHist[i].a > aMax) aMax = accHist[i].a;
+    if(aMax <= 0) aMax = 1;
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.fillRect(gx, gy, gw, gh);
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(gx+0.5, gy+0.5, gw-1, gh-1);
+    // 1秒間隔の縦グリッド
+    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+    ctx.beginPath();
+    for(let s=1;s<ACC_GRAPH_WINDOW;s++){
+      const x = gx + gw - (s/ACC_GRAPH_WINDOW)*gw;
+      ctx.moveTo(x, gy); ctx.lineTo(x, gy+gh);
+    }
+    ctx.stroke();
+    // 波形(ターゲットのトレイル色)
+    ctx.strokeStyle = 'rgba(140,190,255,0.9)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    let started = false;
+    for(let i=0;i<accHist.length;i++){
+      const p = accHist[i];
+      const x = gx + gw - ((now - p.t)/ACC_GRAPH_WINDOW)*gw;
+      if(x < gx) continue;
+      const y = gy + gh - 2 - (p.a/aMax)*(gh - 16);
+      if(!started){ ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    // ラベル
+    ctx.fillStyle = 'rgba(255,255,255,0.65)';
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    const fmt = v => v>=1e6 ? (v/1e6).toFixed(1)+'e6' : v>=1e3 ? (v/1e3).toFixed(1)+'e3' : v.toFixed(0);
+    ctx.fillText('|a_T| px/s²  max '+fmt(aMax), gx+6, gy+4);
+    ctx.textAlign = 'right';
+    ctx.fillText('← '+ACC_GRAPH_WINDOW+'s', gx+gw-6, gy+4);
+    ctx.restore();
+  }
 
   function step(nowMS){
     // Detect iframe layout changes and resize canvas (early return if no size change)
@@ -990,6 +1043,9 @@
         const aRaw = mulv(sub(vNow, tgtVel), 1/dt);
         const k = Math.min(1, dt * APN_ACC_EMA);
         tgtAcc = addv(mulv(tgtAcc, 1-k), mulv(aRaw, k));
+        // グラフ用に生値を記録
+        accHist.push({t: now, a: len(aRaw)});
+        while (accHist.length && now - accHist[0].t > ACC_GRAPH_WINDOW + 0.5) accHist.shift();
       }
       tgtVel = vNow;
     } else {
@@ -1156,6 +1212,9 @@
         capBadge.x + (capBadge.w - bw) / 2, capBadge.y + (capBadge.h - bh) / 2, bw, bh);
       ctx.restore();
     }
+
+    // ターゲット加速度グラフ(最前面・通常合成)
+    drawAccGraph(now);
 
     dbgStat.raf++;
     requestAnimationFrame(step);
