@@ -918,7 +918,7 @@
   const tgtTrail = []; let lastTgt = null;
 
   // グラフストリップ1枚を描く。最新サンプルが右端、左端が-10s
-  function drawGraphStrip(now, hist, yMax, label, color, gx, gw, gy, gh){
+  function drawGraphStrip(now, hist, yMax, label, unit, color, gx, gw, gy, gh){
     ctx.fillStyle = 'rgba(0,0,0,0.35)';
     ctx.fillRect(gx, gy, gw, gh);
     ctx.strokeStyle = 'rgba(255,255,255,0.3)';
@@ -947,13 +947,20 @@
       if(!started){ ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y);
     }
     ctx.stroke();
-    // ラベル
+    // ラベル + リアルタイム現在値(右上)、時間窓表記は右下
     ctx.fillStyle = 'rgba(255,255,255,0.65)';
     ctx.font = '10px monospace';
     ctx.textAlign = 'left'; ctx.textBaseline = 'top';
     ctx.fillText(label, gx+6, gy+4);
-    ctx.textAlign = 'right';
-    ctx.fillText('← '+ACC_GRAPH_WINDOW+'s', gx+gw-6, gy+4);
+    ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
+    ctx.fillText('← '+ACC_GRAPH_WINDOW+'s', gx+gw-6, gy+gh-3);
+    if (hist.length) {
+      ctx.fillStyle = 'rgba(255,255,255,0.95)';
+      ctx.font = 'bold 12px monospace';
+      ctx.textBaseline = 'top';
+      ctx.fillText(Math.round(hist[hist.length-1].a).toLocaleString('en-US') + ' ' + unit,
+                   gx+gw-6, gy+4);
+    }
   }
 
   // ターゲット速度(左)・加速度(右)グラフを画面下部に並置
@@ -963,9 +970,9 @@
     if(gw < 80) return;
     const gh = ACC_GRAPH_H, gy = H - ACC_GRAPH_MB - gh;
     ctx.save();
-    drawGraphStrip(now, spdHist, SPD_GRAPH_YMAX, '|v_T| m/s  [0-'+SPD_GRAPH_YMAX+']',
+    drawGraphStrip(now, spdHist, SPD_GRAPH_YMAX, '|v_T| m/s  [0-'+SPD_GRAPH_YMAX+']', 'm/s',
                    'rgba(150,230,170,0.9)', ACC_GRAPH_MX, gw, gy, gh);
-    drawGraphStrip(now, accHist, ACC_GRAPH_YMAX, '|a_T| m/s²  [0-'+ACC_GRAPH_YMAX+']',
+    drawGraphStrip(now, accHist, ACC_GRAPH_YMAX, '|a_T| m/s²  [0-'+ACC_GRAPH_YMAX+']', 'm/s²',
                    'rgba(140,190,255,0.9)', ACC_GRAPH_MX + gw + ACC_GRAPH_GAP, gw, gy, gh);
     ctx.restore();
   }
