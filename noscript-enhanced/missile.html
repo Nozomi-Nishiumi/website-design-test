@@ -54,8 +54,9 @@
 
   // Missile
   const MISSILE_COUNT = 4, PN_GAIN = 3.4, MAX_TURN_RATE = 3.2;
-  // APN(増強比例航法): 増強項ゲイン N/2、増強項の旋回率寄与上限、目標加速度EMAの応答率
-  const APN_AUG_GAIN = PN_GAIN * 0.5, APN_AUG_CAP = MAX_TURN_RATE * 0.5, APN_ACC_EMA = 8;
+  // APN(増強比例航法): 増強項ゲイン N/2、増強項の旋回率寄与上限。
+  // 目標加速度は座標二階差分の生値を使用(急変時の暴れは増強項キャップで抑制)
+  const APN_AUG_GAIN = PN_GAIN * 0.5, APN_AUG_CAP = MAX_TURN_RATE * 0.5;
   // ターゲット速度・加速度グラフ(画面下部に左右並置): 横軸=時間(直近10s)、
   // 縦軸=|v_T| [m/s] / |a_T| [m/s²]。座標の差分の生値(EMA平滑化前)をそのまま描く。
   // 縦軸は固定スケール(オートスケールなし)、超過分は上端でクリップ
@@ -847,7 +848,7 @@
   function initMissiles(){ missiles.length = 0; for(let i=0;i<MISSILE_COUNT;i++) missiles.push(spawnMissile(i,0)); }
   initMissiles();
 
-  // APN用: 目標加速度の推定値(有限差分+EMA平滑化)。カーソル入力は衝撃的なので生の二階差分は使わない
+  // APN用: 目標加速度(座標の二階差分の生値。グラフと同一の取得方式)
   let tgtPrev = null, tgtVel = null, tgtAcc = {x:0,y:0,z:0};
   // グラフ用: 生の|a_T|・|v_T|履歴 {t, a}
   const accHist = [], spdHist = [];
@@ -1032,6 +1033,23 @@
     fadeAccum += a;
     if (fadeAccum > 1.05) { fctx.clearRect(0,0,W,H); fadeAccum = 0; }
 
+    // Camera rotation & forward movement — ターゲット計算より先に行う(ジッタ修正)。
+    // 旧順序(ターゲット計算→カメラ更新)では、位置差分グラフの分母dtと位置に
+    // 反映済みのカメラ移動のdtが1フレームずれ、フレーム間隔が揺れる環境
+    // (スマホ実機等)で速度・加速度に×2/×0.5の見かけのジッタが出ていた。
+    // 操舵は前フレームのT(tgtPrev)を参照——16msの遅れ、操舵時定数~1.7sに対し無視可
+    if (tgtPrev) {
+      const {yawRate, pitchRate} = steerCameraToward(tgtPrev);
+      cam.yaw   += yawRate   * dt;
+      cam.pitch  = clamp(cam.pitch + pitchRate * dt, PITCH_MIN, PITCH_MAX);
+    }
+    if(running){
+      const {f} = camAxes();
+      cam.x += f.x * CAM_FWD_PX_S * dt;
+      cam.y += f.y * CAM_FWD_PX_S * dt;
+      cam.z += f.z * CAM_FWD_PX_S * dt;
+    }
+
     // Target position
     const centerX = W * 0.5, centerY = H * 0.45;
     let rawX, rawY;
@@ -1048,16 +1066,18 @@
     const offX = clampedX - W*0.5, offY = clampedY - H*0.5;
     const T = targetFromOffset(offX, offY);
 
-    // 目標加速度推定(APN増強項用)。dt異常時(タブ復帰等)は推定をリセット
+    // 目標加速度の取得(APN増強項・グラフ共用)。座標の二階差分の生値を
+    // そのまま使う(EMA推定は廃止)。dt異常時(タブ復帰等)はリセット
     if (tgtPrev && dt > 1e-4 && dt < 0.1) {
       const vNow = mulv(sub(T, tgtPrev), 1/dt);
       if (tgtVel) {
         const aRaw = mulv(sub(vNow, tgtVel), 1/dt);
-        const k = Math.min(1, dt * APN_ACC_EMA);
-        tgtAcc = addv(mulv(tgtAcc, 1-k), mulv(aRaw, k));
+        tgtAcc = aRaw;
         // グラフ用に生値を記録(仮想空間のm/s²に換算)
         accHist.push({t: now, a: len(aRaw) * WORLD_M_PER_PX});
         while (accHist.length && now - accHist[0].t > ACC_GRAPH_WINDOW + 0.5) accHist.shift();
+      } else {
+        tgtAcc = {x:0,y:0,z:0};
       }
       // 速度グラフ用(仮想空間のm/sに換算)
       spdHist.push({t: now, a: len(vNow) * WORLD_M_PER_PX});
@@ -1067,17 +1087,6 @@
       tgtVel = null; tgtAcc = {x:0,y:0,z:0};
     }
     tgtPrev = T;
-
-    // Camera rotation & forward movement
-    const {yawRate, pitchRate} = steerCameraToward(T);
-    cam.yaw   += yawRate   * dt;
-    cam.pitch  = clamp(cam.pitch + pitchRate * dt, PITCH_MIN, PITCH_MAX);
-    if(running){
-      const {f} = camAxes();
-      cam.x += f.x * CAM_FWD_PX_S * dt;
-      cam.y += f.y * CAM_FWD_PX_S * dt;
-      cam.z += f.z * CAM_FWD_PX_S * dt;
-    }
 
     // Target trail
     lastTgt = pushTrail(tgtTrail, lastTgt, T, now, 0);
