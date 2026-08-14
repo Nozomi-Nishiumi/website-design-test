@@ -63,11 +63,10 @@
   const MISSILE_TURN_MAX = MISSILE_ACC_MAX / WORLD_M_PER_PX / MISSILE_SPEED;  // = 3.2 rad/s
   // APN(増強比例航法): 増強項ゲイン N/2、増強項の旋回率寄与上限、目標加速度EMAの応答率
   const APN_AUG_GAIN = PN_GAIN * 0.5, APN_AUG_CAP = MISSILE_TURN_MAX * 0.5, APN_ACC_EMA = 8;
-  // ターゲットは現行方式(カメラ球面上へ配置)のまま、カメラ相対の球面運動を
-  // 「速度追従」で制限する: 指示点(カーソル)の移動速度に、角速度上限
-  // TGT_SLEW_MAX・角加速度上限 TGT_ALPHA(ミサイルと同一の384 m/s²相当)で追従。
-  // 入力が止まれば指令速度0となり、その場で減速停止する(残った位置ずれは
-  // 追いかけない=累積する。演出中はOSカーソル非表示のため相対操作として機能)
+  // ターゲットはカーソル指示点(カメラ球面上)への位置追従スルー方式(20260814fで
+  // 確認済みの制御)のまま、角速度上限 TGT_SLEW_MAX に加えて角加速度上限
+  // TGT_ALPHA(ミサイルと同一の384 m/s²相当)でスルーレートの変化を制限する。
+  // 移動ステップは残角θを超えない=行き過ぎなし。指示点に到達したら停止
   const TGT_SLEW_MAX = 2.5;                 // rad/s (球面弧速度 ≈260 m/s)
   const TGT_ACC_MAX = MISSILE_ACC_MAX;      // m/s² (=384、ミサイルと同一)
   const TGT_ALPHA = TGT_ACC_MAX / WORLD_M_PER_PX / TARGET_DIST;  // 角加速度 ≈3.7 rad/s²
@@ -860,9 +859,9 @@
 
   // APN用: 目標加速度の推定値(有限差分+EMA平滑化)。カーソル入力は衝撃的なので生の二階差分は使わない
   let tgtPrev = null, tgtVel = null, tgtAcc = {x:0,y:0,z:0};
-  // ターゲットのカメラ相対方向(単位ベクトル、カメラ基底{r,u,f}成分)、
-  // 球面上の角速度ベクトル(接平面内, rad/s)、前フレームの指示方向。速度追従用
-  let tgtDirCam = null, tgtRateCam = {x:0,y:0,z:0}, tgtDesPrev = null;
+  // ターゲットのカメラ相対方向(単位ベクトル、カメラ基底{r,u,f}成分)と
+  // 現在のスルーレート(スカラー, rad/s)。位置追従スルー+加速度制限用
+  let tgtDirCam = null, tgtSlewRate = 0;
   // グラフ用: 生の|a_T|・|v_T|履歴 {t, a}
   const accHist = [], spdHist = [];
 
@@ -1079,10 +1078,10 @@
     const offX = clampedX - W*0.5, offY = clampedY - H*0.5;
     const Tdes = targetFromOffset(offX, offY);
 
-    // 球面上の速度追従: 指示方向 dDes(カメラ基底)の移動角速度を指令とし、
-    // 角速度ベクトル tgtRateCam を角速度上限 TGT_SLEW_MAX・角加速度上限
-    // TGT_ALPHA で追従させる。指示が静止すれば指令0となりその場で減速停止。
-    // 位置の残差は追いかけない(速度追従のみ)
+    // 位置追従スルー(20260814f確認済みの方式)+加速度制限: カーソル指示方向
+    // dDes へ大円上を回す。所要レート min(TGT_SLEW_MAX, θ/dt) を指令とし、
+    // スルーレートの変化を角加速度上限 TGT_ALPHA で制限。ステップは残角θを
+    // 超えない=行き過ぎなし、到達したら張り付いて停止
     {
       const {r,u,f} = camAxes();
       const rel = sub(Tdes, {x:cam.x, y:cam.y, z:cam.z});
@@ -1090,33 +1089,20 @@
       if (!tgtDirCam) {
         tgtDirCam = dDes;
       } else {
-        // 指示方向の角速度(カメラ基底内での相対運動のみ)
-        let omegaDes = {x:0,y:0,z:0};
-        if (tgtDesPrev && dt > 1e-4 && dt < 0.1) {
-          const c = clamp(dot(tgtDesPrev, dDes), -1, 1);
-          const ang = Math.acos(c);
-          const ax = cross(tgtDesPrev, dDes);
-          const axLen = len(ax);
-          if (axLen > 1e-9 && ang > 1e-9) {
-            let w = ang / dt;
-            if (w > TGT_SLEW_MAX) w = TGT_SLEW_MAX;
-            omegaDes = mulv(ax, w / axLen);
-          }
-        }
-        // 加速度制限付きで角速度を指令に追従
-        let dv = sub(omegaDes, tgtRateCam);
+        const theta = Math.acos(clamp(dot(tgtDirCam, dDes), -1, 1));
+        const wDes = Math.min(TGT_SLEW_MAX, (dt > 1e-4) ? theta/dt : 0);
         const dvMax = TGT_ALPHA * Math.min(dt, 0.1);
-        const dvLen = len(dv);
-        if (dvLen > dvMax) dv = mulv(dv, dvMax/dvLen);
-        tgtRateCam = addv(tgtRateCam, dv);
-        // 前進(角速度ベクトル×方向で球面上を移動)、角速度は接平面に再射影
-        const step = len(tgtRateCam) * dt;
-        if (step > 1e-9) {
-          tgtDirCam = norm(addv(tgtDirCam, mulv(cross(tgtRateCam, tgtDirCam), dt)));
-          tgtRateCam = sub(tgtRateCam, mulv(tgtDirCam, dot(tgtRateCam, tgtDirCam)));
+        tgtSlewRate += clamp(wDes - tgtSlewRate, -dvMax, dvMax);
+        const step = Math.min(tgtSlewRate * dt, theta);
+        if (theta <= 1e-7) {
+          tgtDirCam = dDes;
+        } else if (step > 1e-7) {
+          const axis = cross(tgtDirCam, dDes);
+          tgtDirCam = (len(axis) > 1e-9)
+            ? norm(rotateAroundAxis(tgtDirCam, axis, step))
+            : dDes;
         }
       }
-      tgtDesPrev = dDes;
       var T = addv({x:cam.x, y:cam.y, z:cam.z},
                    mulv(addv(addv(mulv(r, tgtDirCam.x), mulv(u, tgtDirCam.y)), mulv(f, tgtDirCam.z)),
                         TARGET_DIST));
