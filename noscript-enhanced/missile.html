@@ -56,13 +56,12 @@
   const MISSILE_COUNT = 4, PN_GAIN = 3.4, MAX_TURN_RATE = 3.2;
   // APN(増強比例航法): 増強項ゲイン N/2、増強項の旋回率寄与上限、目標加速度EMAの応答率
   const APN_AUG_GAIN = PN_GAIN * 0.5, APN_AUG_CAP = MAX_TURN_RATE * 0.5, APN_ACC_EMA = 8;
-  // ターゲット加速度グラフ(画面下部): 横軸=時間(直近10s)、縦軸=|a_T| [m/s²]。
-  // 座標の二階差分の生値(EMA平滑化前)をそのまま描く。
-  // 縦軸は固定スケール 0〜ACC_GRAPH_YMAX(オートスケールなし)、超過分は上端でクリップ
-  const ACC_GRAPH_WINDOW = 10, ACC_GRAPH_H = 60, ACC_GRAPH_MX = 20, ACC_GRAPH_MB = 12;
-  // 上限は実測に基づく: 激しい8の字機動(全幅±380px, 0.8Hz)の運動学的ピークが
-  // ≈4200 m/s²。実マウスのイベント離散化スパイクは瞬間的に超えるが上端クリップで表示
-  const ACC_GRAPH_YMAX = 5000;
+  // ターゲット速度・加速度グラフ(画面下部に左右並置): 横軸=時間(直近10s)、
+  // 縦軸=|v_T| [m/s] / |a_T| [m/s²]。座標の差分の生値(EMA平滑化前)をそのまま描く。
+  // 縦軸は固定スケール(オートスケールなし)、超過分は上端でクリップ
+  const ACC_GRAPH_WINDOW = 10, ACC_GRAPH_H = 60, ACC_GRAPH_MX = 20, ACC_GRAPH_MB = 12, ACC_GRAPH_GAP = 16;
+  const ACC_GRAPH_YMAX = 20000;
+  const SPD_GRAPH_YMAX = 500;
   // 仮想空間の物理スケール: 追跡ドローン(カメラ)の飛行速度を 40 m/s
   // (レース用FPVドローン級)と置いて世界座標単位→メートルを定義。
   // 含意: ターゲット距離≈104m、ミサイル速度≈120m/s
@@ -850,8 +849,8 @@
 
   // APN用: 目標加速度の推定値(有限差分+EMA平滑化)。カーソル入力は衝撃的なので生の二階差分は使わない
   let tgtPrev = null, tgtVel = null, tgtAcc = {x:0,y:0,z:0};
-  // グラフ用: 生の|a_T|履歴 {t, a}
-  const accHist = [];
+  // グラフ用: 生の|a_T|・|v_T|履歴 {t, a}
+  const accHist = [], spdHist = [];
 
   // ===== Explosion =====
   const expl = [];
@@ -917,20 +916,14 @@
   let last = performance.now();
   const tgtTrail = []; let lastTgt = null;
 
-  // ターゲット加速度グラフ(画面下部)。最新サンプルが右端、左端が-10s。
-  // 縦軸は表示窓内の最大値でオートスケール
-  function drawAccGraph(now){
-    if(accHist.length < 2) return;
-    const gw = W - ACC_GRAPH_MX*2, gh = ACC_GRAPH_H;
-    const gx = ACC_GRAPH_MX, gy = H - ACC_GRAPH_MB - gh;
-    if(gw < 80) return;
-    ctx.save();
+  // グラフストリップ1枚を描く。最新サンプルが右端、左端が-10s
+  function drawGraphStrip(now, hist, yMax, label, color, gx, gw, gy, gh){
     ctx.fillStyle = 'rgba(0,0,0,0.35)';
     ctx.fillRect(gx, gy, gw, gh);
     ctx.strokeStyle = 'rgba(255,255,255,0.3)';
     ctx.lineWidth = 1;
     ctx.strokeRect(gx+0.5, gy+0.5, gw-1, gh-1);
-    // 1秒間隔の縦グリッド + 中間値(YMAX/2)の横グリッド
+    // 1秒間隔の縦グリッド + 中間値(yMax/2)の横グリッド
     ctx.strokeStyle = 'rgba(255,255,255,0.1)';
     ctx.beginPath();
     for(let s=1;s<ACC_GRAPH_WINDOW;s++){
@@ -940,16 +933,16 @@
     const yMid = gy + gh - 2 - 0.5*(gh - 16);
     ctx.moveTo(gx, yMid); ctx.lineTo(gx+gw, yMid);
     ctx.stroke();
-    // 波形(ターゲットのトレイル色)
-    ctx.strokeStyle = 'rgba(140,190,255,0.9)';
+    // 波形
+    ctx.strokeStyle = color;
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     let started = false;
-    for(let i=0;i<accHist.length;i++){
-      const p = accHist[i];
+    for(let i=0;i<hist.length;i++){
+      const p = hist[i];
       const x = gx + gw - ((now - p.t)/ACC_GRAPH_WINDOW)*gw;
       if(x < gx) continue;
-      const y = gy + gh - 2 - Math.min(p.a, ACC_GRAPH_YMAX)/ACC_GRAPH_YMAX*(gh - 16);
+      const y = gy + gh - 2 - Math.min(p.a, yMax)/yMax*(gh - 16);
       if(!started){ ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y);
     }
     ctx.stroke();
@@ -957,9 +950,22 @@
     ctx.fillStyle = 'rgba(255,255,255,0.65)';
     ctx.font = '10px monospace';
     ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-    ctx.fillText('|a_T| m/s²  [0-'+ACC_GRAPH_YMAX+']', gx+6, gy+4);
+    ctx.fillText(label, gx+6, gy+4);
     ctx.textAlign = 'right';
     ctx.fillText('← '+ACC_GRAPH_WINDOW+'s', gx+gw-6, gy+4);
+  }
+
+  // ターゲット速度(左)・加速度(右)グラフを画面下部に並置
+  function drawTgtGraphs(now){
+    if(accHist.length < 2) return;
+    const gw = Math.floor((W - ACC_GRAPH_MX*2 - ACC_GRAPH_GAP) / 2);
+    if(gw < 80) return;
+    const gh = ACC_GRAPH_H, gy = H - ACC_GRAPH_MB - gh;
+    ctx.save();
+    drawGraphStrip(now, spdHist, SPD_GRAPH_YMAX, '|v_T| m/s  [0-'+SPD_GRAPH_YMAX+']',
+                   'rgba(150,230,170,0.9)', ACC_GRAPH_MX, gw, gy, gh);
+    drawGraphStrip(now, accHist, ACC_GRAPH_YMAX, '|a_T| m/s²  [0-'+ACC_GRAPH_YMAX+']',
+                   'rgba(140,190,255,0.9)', ACC_GRAPH_MX + gw + ACC_GRAPH_GAP, gw, gy, gh);
     ctx.restore();
   }
 
@@ -1053,6 +1059,9 @@
         accHist.push({t: now, a: len(aRaw) * WORLD_M_PER_PX});
         while (accHist.length && now - accHist[0].t > ACC_GRAPH_WINDOW + 0.5) accHist.shift();
       }
+      // 速度グラフ用(仮想空間のm/sに換算)
+      spdHist.push({t: now, a: len(vNow) * WORLD_M_PER_PX});
+      while (spdHist.length && now - spdHist[0].t > ACC_GRAPH_WINDOW + 0.5) spdHist.shift();
       tgtVel = vNow;
     } else {
       tgtVel = null; tgtAcc = {x:0,y:0,z:0};
@@ -1219,8 +1228,8 @@
       ctx.restore();
     }
 
-    // ターゲット加速度グラフ(最前面・通常合成)
-    drawAccGraph(now);
+    // ターゲット速度・加速度グラフ(最前面・通常合成)
+    drawTgtGraphs(now);
 
     dbgStat.raf++;
     requestAnimationFrame(step);
