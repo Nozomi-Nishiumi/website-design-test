@@ -883,10 +883,10 @@ section.parallax-section {
 
 
 
-/* 入場演出: 内容そのもののopacityは動かさない(スクロール連動のopacityアニメは
-   要素を恒常的にbackdrop root化し、内側のすりガラスのbackdrop-filterが背景を
-   参照できなくなる——Chromiumで実測)。滑り上がり(transform)だけ内容に残し、
-   フェードは下の .parallax-section::after 黒ベールのフェードアウトで表現する */
+/* 入場演出: 滑り上がり(transform)のみ。フェードは廃止(ユーザー判断 2026-08-27)。
+   opacityのスクロール連動アニメは要素を恒常的にbackdrop root化し、内側の
+   すりガラスのbackdrop-filterが背景を参照できなくなるため(Chromiumで実測)、
+   opacityには一切触れない。transformはbackdrop rootを作らないので安定 */
 .fade-in {
   transform: translateY(20px);
   animation: fadeUp linear forwards;
@@ -904,37 +904,6 @@ section.parallax-section {
 @keyframes fadeUp {
   to {
     transform: translateY(0);
-  }
-}
-
-/* 入場フェード用の黒ベール: セクション全面を覆い、スクロール連動でフェードアウト。
-   ベールは内容の祖先ではないので、すりガラスのbackdrop採取を妨げない。
-   スクロール連動アニメ非対応ブラウザでは duration 0 + forwards で即 opacity:0 になる */
-.parallax-section::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: #000;
-  pointer-events: none;
-  z-index: 3; /* 内容(z-index:2)より上 */
-  opacity: 1;
-  animation: veilOut linear forwards;
-  animation-timeline: view();
-  animation-range: entry 20% cover 30%;
-}
-@keyframes veilOut {
-  to {
-    opacity: 0;
-  }
-}
-@media (max-width: 768px) {
-  /* スマホは .fade-in 同様に入場演出なし */
-  .parallax-section::after {
-    animation: none;
-    opacity: 0;
   }
 }
 
