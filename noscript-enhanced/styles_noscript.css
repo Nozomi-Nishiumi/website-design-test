@@ -1350,10 +1350,12 @@ html:not(.enh) #top::after {
    濃いめの半透明単色にフォールバック(可読性は確保される)。 */
 .parallax-section .text-block,
 .parallax-section .topics-grid,
+.parallax-section .glass-panel,
 .parallax-section .projects-list,
 .parallax-section .contact-block {
   /* ごく薄い白フィルでわずかに明るく+背景のディテールを均すぼかし。
-     トピック4枚はカード個別でなく .topics-grid ごと1枚の連続パネル */
+     トピック4枚は .topics-grid ごと、範囲指定の統合パネルは .glass-panel で
+     1枚の連続パネルにする */
   background: rgba(255, 255, 255, 0.05);
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
@@ -1361,8 +1363,8 @@ html:not(.enh) #top::after {
   padding: 18px 22px;
 }
 /* ガラス内ガラスの打ち消し(入れ子だと二重ぼかし=濁り+無駄な負荷) */
-.parallax-section :is(.text-block, .topics-grid, .topic-block, .projects-list, .contact-block)
-  :is(.text-block, .topics-grid, .topic-block, .projects-list, .contact-block) {
+.parallax-section :is(.text-block, .topics-grid, .glass-panel, .topic-block, .projects-list, .contact-block)
+  :is(.text-block, .topics-grid, .glass-panel, .topic-block, .projects-list, .contact-block) {
   background: none;
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
@@ -1373,6 +1375,7 @@ html:not(.enh) #top::after {
 @supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
   .parallax-section .text-block,
   .parallax-section .topics-grid,
+  .parallax-section .glass-panel,
   .parallax-section .projects-list,
   .parallax-section .contact-block {
     background: rgba(0, 0, 0, 0.55);
@@ -1381,6 +1384,7 @@ html:not(.enh) #top::after {
 @media (max-width: 768px) {
   .parallax-section .text-block,
   .parallax-section .topics-grid,
+  .parallax-section .glass-panel,
   .parallax-section .projects-list,
   .parallax-section .contact-block {
     padding: 14px;
