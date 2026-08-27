@@ -1342,3 +1342,47 @@ html:not(.enh) #top::after {
   #top .subtitle-ja,
   #top .university-line { font-size: 14px; }
 }
+
+/* ── すりガラスパネル(セクション2以降の本文可読性向上) ──────────────
+   背景画像の上で、文字ブロックの背後だけをぼかして均す(角丸矩形)。
+   ::before の全面暗幕はそのまま、パネルはその上に載る。
+   Safari は -webkit- プレフィックス必須。非対応環境は @supports で
+   濃いめの半透明単色にフォールバック(可読性は確保される)。 */
+.parallax-section .text-block,
+.parallax-section .topic-block,
+.parallax-section .projects-list,
+.parallax-section .contact-block {
+  background: rgba(15, 18, 24, 0.38);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  padding: 18px 22px;
+}
+/* ガラス内ガラスの打ち消し(入れ子だと二重ぼかし=濁り+無駄な負荷) */
+.parallax-section :is(.text-block, .topic-block, .projects-list, .contact-block)
+  :is(.text-block, .topic-block, .projects-list, .contact-block) {
+  background: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+}
+@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .parallax-section .text-block,
+  .parallax-section .topic-block,
+  .parallax-section .projects-list,
+  .parallax-section .contact-block {
+    background: rgba(0, 0, 0, 0.55);
+  }
+}
+@media (max-width: 768px) {
+  .parallax-section .text-block,
+  .parallax-section .topic-block,
+  .parallax-section .projects-list,
+  .parallax-section .contact-block {
+    padding: 14px;
+    border-radius: 12px;
+  }
+}
