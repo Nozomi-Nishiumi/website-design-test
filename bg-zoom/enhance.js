@@ -16,7 +16,7 @@
   'use strict';
 
   // デプロイごとに更新するバージョン(キャッシュバスティング/HUD表示用)
-  var ENH_VERSION = '20260828b';
+  var ENH_VERSION = '20260828c';
 
   // ハンバーガーメニュー: 項目をタップしたら閉じる(CSSのチェックボックスを外す)。
   // 演出の有無に関係なく効かせたいので、reduced-motion の早期 return より前に置く
@@ -359,9 +359,8 @@
   var BGZ_MAX = 0.12;  // 最大 1.12倍(1.08では知覚しづらかったため増量)
   var BGZ_RATE = 1.6;  // 進行の前倒し係数: 通過の約6割で最大到達(1画面あたりの
                        // 変化率を上げて知覚しやすくする。以降は1.12で保持)
-  var bgzSections = (window.matchMedia('(max-width: 768px)').matches ||
-                     window.matchMedia('(pointer: coarse)').matches)
-    ? document.querySelectorAll('.parallax-section') : [];
+  // [第2段] PCも窓方式(styles_noscript.css)に統一したため全環境で駆動する
+  var bgzSections = document.querySelectorAll('.parallax-section');
 
   function renderBgZoom() {
     var vh = window.innerHeight;
