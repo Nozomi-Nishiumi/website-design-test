@@ -42,10 +42,10 @@
   }
   </script>
 
-  <link rel="stylesheet" href="styles_noscript.css?v=20260828b" type="text/css">
+  <link rel="stylesheet" href="styles_noscript.css?v=20260828c" type="text/css">
   <!-- 漸進強化: JSが無効ならこの2行は無害で、noscript版がそのまま表示される -->
   <link rel="stylesheet" href="enhance.css?v=20260827o" type="text/css">
-  <script src="enhance.js?v=20260827a" defer></script>
+  <script src="enhance.js?v=20260828a" defer></script>
 </head>
 <body>
 
@@ -508,13 +508,9 @@ if (/[?&]zoomdiag=1/.test(location.search)) {
     (function tick() {
       var cs = getComputedStyle(sec, '::after');
       d.textContent =
-        'supports scroll(): ' + (window.CSS && CSS.supports ?
-          CSS.supports('animation-timeline: scroll()') : 'no CSS.supports') +
-        '\nsupports view-tl : ' + (window.CSS && CSS.supports ?
-          CSS.supports('view-timeline-name: --a') : '?') +
-        '\nanim: ' + cs.animationName + '  dur: ' + cs.animationDuration +
-        '\ntimeline: ' + (cs.animationTimeline || '(unreadable)') +
-        '\ns3 transform: ' + cs.transform +
+        'v3 (JS-driven --bgz)' +
+        '\n--bgz(s3): ' + (getComputedStyle(sec).getPropertyValue('--bgz') || '(unset)') +
+        '\ns3 ::after transform: ' + cs.transform +
         '\nscrollY: ' + Math.round(window.scrollY);
       requestAnimationFrame(tick);
     })();

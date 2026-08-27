@@ -16,7 +16,7 @@
   'use strict';
 
   // デプロイごとに更新するバージョン(キャッシュバスティング/HUD表示用)
-  var ENH_VERSION = '20260827a';
+  var ENH_VERSION = '20260828a';
 
   // ハンバーガーメニュー: 項目をタップしたら閉じる(CSSのチェックボックスを外す)。
   // 演出の有無に関係なく効かせたいので、reduced-motion の早期 return より前に置く
@@ -351,11 +351,40 @@
   var ticking = false;
   var lastScrolled = null;
 
+  // --- 背景ズーム(bg-zoomブランチ実験): スマホ系のみ ---
+  // styles_noscript.css の transform: scale(var(--bgz,1)) を駆動する。
+  // CSSタイムラインではなくJS駆動なのは、named view-timeline→fixed疑似要素が
+  // 「計算値は進むが描画されない」故障をエンジン依存で起こすため(実測)。
+  // 書き込みは transform に帰着する変数のみ・タッチ介入なし(設計規約1,3準拠)
+  var BGZ_MAX = 0.12; // 通過完了時に 1.0+0.12 = 1.12倍(1.08では知覚しづらかったため増量)
+  var bgzSections = (window.matchMedia('(max-width: 768px)').matches ||
+                     window.matchMedia('(pointer: coarse)').matches)
+    ? document.querySelectorAll('.parallax-section') : [];
+
+  function renderBgZoom() {
+    var vh = window.innerHeight;
+    var rects = [];
+    var bi;
+    // 読み(getBoundingClientRect)と書き(setProperty)を分離してレイアウト
+    // スラッシングを避ける
+    for (bi = 0; bi < bgzSections.length; bi++) {
+      rects.push(bgzSections[bi].getBoundingClientRect());
+    }
+    for (bi = 0; bi < bgzSections.length; bi++) {
+      var r = rects[bi];
+      if (r.bottom < 0 || r.top > vh) continue; // 画面外(窓に描画されない)は据え置き
+      var bp = clamp01((vh - r.top) / (vh + r.height)); // ビューポート通過進行 0→1
+      bgzSections[bi].style.setProperty('--bgz', (1 + BGZ_MAX * bp).toFixed(4));
+    }
+  }
+
   function render(force) {
     ticking = false;
     var scrolled = -stage.getBoundingClientRect().top;
     if (!force && scrolled === lastScrolled) return;
     lastScrolled = scrolled;
+
+    renderBgZoom();
 
     var pHero = clamp01(scrolled / geo.heroRange);
     var pS1 = clamp01((scrolled - geo.heroRange) / geo.s1Range);

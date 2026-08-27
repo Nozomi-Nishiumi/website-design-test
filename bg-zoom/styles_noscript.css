@@ -890,32 +890,17 @@ section.parallax-section {
      壊すため厳禁(入場演出fadeUpと同じ方針)。clip-pathも静的なまま
    - scale≥1 なので cover 済み画像の端が露出することはない
    - 非対応ブラウザは @supports ごと無視され現行の静止パララックスのまま */
-@supports (animation-timeline: scroll()) {
-  @media (max-width: 768px), (pointer: coarse) {
-    /* v2: scroll(root)(ページ全体で1.08倍)は1セクション通過あたり約1.3%しか
-       変化せず知覚不能だった。各セクション自身のビューポート通過進行で
-       駆動する view-timeline に変更(1セクションごとに 1.0→1.08 を一巡)。
-       ::after は fixed で動かないため view() 直接は使えず、通常フローで
-       スクロールする親セクションに名前付きタイムラインを置いて参照する
-       (名前はそのセクションのサブツリー=自分の::afterにだけ見える) */
-    .parallax-section {
-      view-timeline-name: --secProgress;
-    }
-    .parallax-section::after {
-      animation: bgZoom linear forwards;
-      animation-duration: auto;  /* ショートハンドの初期値0sを進行連動用に明示上書き */
-      animation-timeline: --secProgress;
-    }
-  }
-}
-@keyframes bgZoom {
-  from { transform: scale(1); }
-  to   { transform: scale(1.08); }
-}
-/* 動きを減らす設定のユーザーにはズームを出さない */
-@media (prefers-reduced-motion: reduce) {
+/* v3: CSSスクロール連動タイムライン(named view-timeline→fixed疑似要素)は
+   「計算値(computed transform)は進むのに描画は静止」というエンジン依存の
+   サイレント故障を配信ページのピクセル計測で確認したため撤去。
+   駆動は enhance.js が担う: 各セクションの通過進行(0→1)をCSS変数 --bgz
+   (scale値 1.0→1.12)としてセクションに書き、ここでは静的 transform として
+   拾うだけにする。静的 transform の描画は全エンジンで実測確認済み。
+   JSなし(noscript)や reduced-motion では --bgz が書かれず既定値1=現行の
+   静止パララックスに安全劣化する */
+@media (max-width: 768px), (pointer: coarse) {
   .parallax-section::after {
-    animation: none;
+    transform: scale(var(--bgz, 1));
   }
 }
 
