@@ -16,7 +16,7 @@
   'use strict';
 
   // デプロイごとに更新するバージョン(キャッシュバスティング/HUD表示用)
-  var ENH_VERSION = '20260828j';
+  var ENH_VERSION = '20260828k';
 
   // ハンバーガーメニュー: 項目をタップしたら閉じる(CSSのチェックボックスを外す)。
   // 演出の有無に関係なく効かせたいので、reduced-motion の早期 return より前に置く
@@ -362,16 +362,8 @@
   // 曲線はイーズアウト(1-p)^BGZ_EASE を通過全域にかける: 序盤は速く引き、
   // 終盤へ漸近減速して出口で等倍。長いセクションでも途中で完全静止する
   // 「サチり」が起きず、境界付近は速度ほぼゼロなのでかくつきも出ない
-  var BGZ_MAX = 0.35;  // 入場時 1.35倍 → 等倍(スマホでの知覚性向上のため増量)
+  var BGZ_MAX = 0.30;  // 入場時 1.30倍 → 等倍
   var BGZ_EASE = 2;    // 減速カーブの強さ(2=二次。大きいほど序盤急・終盤ゆるやか)
-  var BGZ_SPAN = 1.0;  // ズームを完了させるスクロール距離(ビューポート高の倍数)。
-                       // 1.0 = セクションの窓が画面全体に育ちきるまでにズームの
-                       // 全行程が起こる(縦長セクションでは入場の強いズームが
-                       // 「画面下部の細い窓」のうちに消費されてしまい知覚できない
-                       // ことが実iOS計測で判明したため、窓の成長と完全同期させる)
-  var BGZ_HOLD = 0.10; // 入場スパンでのズームアウトの着地点(1.10)。残りの
-                       // 1.10→1.00 は退場パン(捲れ)と同時に消化する2段構成で、
-                       // 縦パン中もズームアウトが並行して進む(ユーザー指定)
   var BGZ_PAN = 0.4;   // 入場側パン = ズーム余剰マージン((scale-1)*H/2)に対する割合。
                        // 1未満なら画像端は構造的に露出せず、減衰もズームと同曲線
   var BGZ_PEEL = 0.2;  // 退場側パン(捲れ): セクションの窓が上へ畳まれる間、背景を
@@ -393,14 +385,11 @@
     for (bi = 0; bi < bgzSections.length; bi++) {
       var r = rects[bi];
       if (r.bottom < 0 || r.top > vh) continue; // 画面外(窓に描画されない)は据え置き
-      var span = Math.min(vh + r.height, BGZ_SPAN * vh); // 固定スパン正規化(縦長対策)
-      var bpz = clamp01((vh - r.top) / span);            // ズーム進行 0→1
-      var pex = clamp01(1 - r.bottom / vh);              // 退場進行(窓下端が上がるほど1へ)
-      var tEx = BGZ_PEEL * vh * pex;                     // 退場側: 境界と一緒に上へ(捲れ)
-      // 2段ズームアウト: 入場スパンで 1.30→1.10、退場パンと同時に 1.10→1.00
-      var s = 1 + BGZ_HOLD * (1 - pex) +
-              (BGZ_MAX - BGZ_HOLD) * Math.pow(1 - bpz, BGZ_EASE);
-      var tIn = BGZ_PAN * (s - 1) * vh / 2;              // 入場側: 沈み位置から定位置へ
+      var bp = clamp01((vh - r.top) / (vh + r.height)); // ビューポート通過進行 0→1
+      var s = 1 + BGZ_MAX * Math.pow(1 - bp, BGZ_EASE); // 1.30→1.0(イーズアウト)
+      var tIn = BGZ_PAN * (s - 1) * vh / 2;             // 入場側: 沈み位置から定位置へ
+      var pex = clamp01(1 - r.bottom / vh);             // 退場進行(窓下端が上がるほど1へ)
+      var tEx = BGZ_PEEL * vh * pex;                    // 退場側: 境界と一緒に上へ(捲れ)
       bgzSections[bi].style.setProperty('--bgz', s.toFixed(4));
       bgzSections[bi].style.setProperty('--bgt', (tIn - tEx).toFixed(1) + 'px');
     }
