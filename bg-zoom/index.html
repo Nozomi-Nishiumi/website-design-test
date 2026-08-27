@@ -495,10 +495,41 @@
 </footer>
 
 <!-- bg-zoomブランチの暫定診断(?zoomdiag=1 のときだけ画面隅に実機の対応状況と
-     背景transformの実測値を表示する。マージ時には削除すること) -->
+     背景transformの実測値を表示する。マージ時には削除すること)
+     追加フラグ(いずれも診断専用):
+       &pulse=1  … スクロールなしで #section-3 の --bgz を 2秒毎に 1.0/1.25 交互切替
+       &kill=a,b … 要素無効化: glass(すりガラス) / iframe(ミサイル) / overlay(暗幕)
+                    / stage(enhステージ非表示) / smooth(scroll-behavior) -->
 <script>
 if (/[?&]zoomdiag=1/.test(location.search)) {
   window.addEventListener('DOMContentLoaded', function () {
+    var killm = (location.search.match(/[?&]kill=([a-z,]+)/) || [])[1] || '';
+    var kills = killm ? killm.split(',') : [];
+    function addCss(css) {
+      var s = document.createElement('style');
+      s.textContent = css;
+      document.head.appendChild(s);
+    }
+    if (kills.indexOf('glass') >= 0) addCss(
+      '* { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }');
+    if (kills.indexOf('overlay') >= 0) addCss(
+      '.parallax-section::before { background: none !important; }');
+    if (kills.indexOf('smooth') >= 0) addCss(
+      'html { scroll-behavior: auto !important; }');
+    if (kills.indexOf('stage') >= 0) addCss(
+      '.enh-stage { display: none !important; }');
+    if (kills.indexOf('iframe') >= 0) setInterval(function () {
+      var f = document.querySelector('.enh-stage iframe');
+      if (f) f.parentNode.removeChild(f);
+    }, 1000);
+    if (/[?&]pulse=1/.test(location.search)) {
+      var flip = false;
+      setInterval(function () {
+        flip = !flip;
+        var s3 = document.querySelector('#section-3');
+        if (s3) s3.style.setProperty('--bgz', flip ? '1.25' : '1.0');
+      }, 2000);
+    }
     var d = document.createElement('div');
     d.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:99999;' +
       'background:rgba(0,0,0,0.85);color:#7fff7f;font:11px/1.6 Menlo,monospace;' +
