@@ -1,0 +1,390 @@
+/* ==========================================================================
+   enhance.css — noscript版への漸進強化スタイル(統合ステージ方式)
+   すべて html.enh 配下 = enhance.js が有効化した時のみ適用。
+   JS が動かなければこのファイルは何もせず、noscript 版がそのまま表示される。
+
+   ステージ構成:
+     .enh-stage(相対配置・全長 460vh)
+       ├ .enh-stage-sticky(sticky 100vh) … 全演出レイヤーはこの1枚の中
+       ├ #top(160vh の高さ確保マーカー)
+       └ #section-1(200vh の高さ確保マーカー兼ナビ用アンカー)
+   ========================================================================== */
+
+/* 横パン防止: フル版(fix/horizontal-pan-section1)で実機実証済みの構成に
+   正確に一致させる = body と main のみに overflow-x: clip。
+   html(ルート)への clip や overscroll-behavior-x は iOS の
+   スクロールツリーを狂わせてタッチスクロール全体が死ぬ既知の不具合系
+   (全域計測で「指117px移動/スクロール0px」のラッチ状態を実機確認) */
+html.enh body,
+html.enh main {
+  overflow-x: clip;
+}
+
+/* smooth スクロール無効化(重要):
+   iOS Safari は「scroll-behavior:smooth + タッチ操作中のプログラム的 scrollBy
+   (ミサイルの縦限界→ページスクロール中継)」の組み合わせでスクロール機構が
+   ラッチし、以後タッチスクロール全体が死ぬ。フリーズは毎回中継使用後に発生
+   していた(実機HUDで確認)。フル版は smooth 不使用で安定していた */
+html.enh {
+  scroll-behavior: auto !important;
+}
+
+/* ---------- ステージ骨格 ---------- */
+
+html.enh .enh-stage {
+  position: relative;
+  background: #000;
+}
+
+html.enh .enh-stage-sticky {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  /* overflow は付けない: WebKit は overflow:clip を持つ要素の sticky 解放を
+     再描画しないバグがあり、ページはスクロールするのに絵が貼り付いたままの
+     「見かけ上のフリーズ」になる(実機HUDで確認済み)。
+     拡大タイルのクリップは子の .enh-hero-inner が担う */
+  background: #000;
+  /* 後続の高さマーカー(#top/#section-1 は base CSS で z-index:0 の
+     positioned 要素)より上に描画しないと、透明なマーカーが全タッチを
+     吸収してタイルリンクもミサイルも操作不能になる */
+  z-index: 1;
+}
+
+/* 高さ確保マーカー(中身は sticky へ移設済み) */
+html.enh #top {
+  height: 160vh;
+  padding: 0;
+  margin: 0;
+  pointer-events: none; /* マーカーは入力を受けない(保険) */
+}
+html.enh #section-1 {
+  height: 200vh;
+  min-height: 0;
+  padding: 0 !important;
+  margin: 0;
+  background: none !important;
+  pointer-events: none; /* マーカーは入力を受けない(保険) */
+}
+html.enh #section-1::before { display: none; }
+
+/* ---------- ヒーロー層 ---------- */
+
+html.enh .enh-hero-inner {
+  position: absolute;
+  inset: 0;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  /* 拡大タイルのはみ出しをここで閉じ込める(sticky 本体に overflow を
+     付けると WebKit の解放バグを踏むため、この子レイヤーが担当)。
+     overflow:hidden の div はユーザー操作ではスクロールしないので安全 */
+  overflow: hidden;
+}
+
+/* タイルグリッド(フル演出版の12カラム構成を再現) */
+html.enh .enh-hero-inner .top-grid {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 1;
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 15px;
+  /* base/main のタイル領域(80px + padding 20px = 100px開始)と一致させる。
+     これでタイル上下段の区切り中心が 50vh+40px となり、タイトル2行が
+     ちょうど区切りを挟む(mainのレイアウト要件) */
+  padding: 100px 20px 20px;
+}
+
+html.enh .enh-hero-inner .top-grid .img-wrap {
+  aspect-ratio: auto;
+  border-radius: 8px;
+  will-change: transform, opacity;
+}
+
+/* 写真1(pigeon)=8/12幅・写真2=4/12幅・写真3〜6=各3/12幅 */
+html.enh .enh-hero-inner .top-grid .img-wrap:nth-child(1) { grid-column: span 8; z-index: 2; }
+html.enh .enh-hero-inner .top-grid .img-wrap:nth-child(2) { grid-column: span 4; }
+html.enh .enh-hero-inner .top-grid .img-wrap:nth-child(n+3) { grid-column: span 3; }
+
+/* 拡大が始まったら hover ズームとリンククリックを無効化 */
+html.enh .enh-hero-inner .top-grid .img-wrap:hover img { transform: none; }
+html.enh .enh-hero-inner .top-grid.enh-no-click a { pointer-events: none; }
+
+/* base(styles_noscript.css)のモバイル切替と同じ768px境界に統一。
+   以前は600pxだったため、600〜768pxの範囲でタイトルだけモバイル寸法・
+   グリッドはPC配置となり大きくずれていた */
+@media (max-width: 768px) {
+  html.enh .enh-hero-inner .top-grid {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: 2fr 1fr 1fr; /* フル版: 上段2枚が高さ半分、下に2×2 */
+    gap: 10px;
+    /* 上padding-下padding=10px で区切り中心=50vh(タイトル中心と一致)。
+       左右はbase版のタイル端(10px)と統一 */
+    padding: 22px 10px 12px;
+  }
+  html.enh .enh-hero-inner .top-grid .img-wrap:nth-child(n+1) { grid-column: span 1; }
+}
+
+/* 明るさ遷移オーバーレイ:
+   A = ヒーロー用グラデ / B = セクション1用の一様0.65(フル版と同じ暗さ)。
+   JS が拡大完了に合わせて A→B をクロスフェードし、明るさの段差を無くす */
+html.enh .enh-overlay-hero,
+html.enh .enh-overlay-s1 {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+html.enh .enh-overlay-hero {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0.65) 100%);
+}
+html.enh .enh-overlay-s1 {
+  background: rgba(0, 0, 0, 0.65);
+  opacity: 0;
+}
+
+/* タイトル・サブタイトルのオーバーレイ配置 */
+html.enh .enh-hero-text {
+  position: absolute;
+  z-index: 4;
+  left: 40px;
+  right: 40px;
+  top: calc(50% + 40px); /* フル版のタイトル中央線: calc(40px + 50vh) */
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+/* base と同じ: 箱の中身はタイトルのみ。研究室名の行は直下にぶら下げ、
+   translateY(-50%) がタイトル中心=中央線になるようにする */
+html.enh .enh-hero-text .scatter-title {
+  margin: 0;
+}
+html.enh .enh-hero-text .top-hero-sub {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 25px; /* main: gap 15px + タイトル margin-bottom 10px */
+  padding: 15px 20px;
+}
+html.enh .enh-hero-text .scatter-title {
+  /* mainフル版のJS自動フィット再現(base側 styles_noscript.css と同じ実測除数) */
+  font-size: calc((100vw - 120px) / 20.35);
+  /* 行送り=タイル行間(15px)+大文字インク高さ(0.8em)。文字端がタイル端に接する */
+  line-height: calc(21px + 0.8em); /* タイル行間15px+ブラウザ差吸収の安全マージン(Safariはインクが約2px低い) */
+  position: relative;
+  /* インク中心を区切り中心へ補正し、さらに1px上げてAA・オーバーシュートの
+     黒帯への滲み出しを防ぐ(DPR2ピクセル実測でタイル端に一致) */
+  top: calc(0.044em - 1px);
+  letter-spacing: 0.01em;
+  padding: 15px 20px;
+  box-sizing: border-box;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+
+/* 単語間は実スペースに任せる(共通の 0.5em では2行に収まらない) */
+html.enh .enh-hero-text .scatter-title .word {
+  margin-right: 0;
+}
+html.enh .enh-hero-text .subtitle-ja,
+html.enh .enh-hero-text .university-line {
+  font-size: 18px;
+  letter-spacing: 2px;
+  color: #fff;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7);
+}
+
+/* base(styles_noscript.css)のスマホ用ヒーロー指定と同じ768px境界に揃える */
+@media (max-width: 768px) {
+  html.enh .enh-hero-text {
+    top: 50%;
+    /* タイトルをタイル2枚分(グリッド全幅)に拡大するため箱を全幅化 */
+    left: 0;
+    right: 0;
+  }
+  html.enh .enh-hero-text .scatter-title {
+    /* 「ANIMAL BEHAVIOURAL STRATEGIES」がほぼタイル2枚分(100vw-20px)。
+       除数はぴったり値20.35に約3%の安全率(Safariのグリフ幅差で
+       折り返し・黒枠はみ出しが起きないように) */
+    font-size: calc((100vw - 20px) / 21);
+    /* 2行の左端を揃えた左寄せブロックを画面中央に配置。
+       「LABORATORY OF」右端は中央仕切りの~3px手前=左タイル内側に収まる */
+    width: max-content;
+    width: fit-content;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: left;
+    padding: 15px 0;
+    /* 黒帯クリアランス17px(タイル行間10px+上下3.5pxずつの余裕) */
+    line-height: calc(17px + 0.8em);
+    top: 0.044em; /* PCと同様、AA滲みが黒帯に入らない位置(DPR2実測) */
+  }
+  html.enh .enh-hero-text .top-hero-sub {
+    padding: 15px 12px;
+  }
+  html.enh .enh-hero-text .subtitle-ja,
+  html.enh .enh-hero-text .university-line { font-size: 14px; }
+}
+
+/* スクロールインジケーター */
+html.enh .enh-scroll-indicator {
+  position: absolute;
+  z-index: 8;
+  bottom: 18px;
+  left: 50%;
+  color: #fff;
+  opacity: 0.75;
+  font-size: 11px;
+  letter-spacing: 0.35em;
+  pointer-events: none;
+  transform: translateX(-50%);
+  animation: enhPulse 2s ease-in-out infinite;
+  transition: opacity 0.3s;
+}
+html.enh .enh-hero-started .enh-scroll-indicator { opacity: 0; }
+@keyframes enhPulse {
+  50% { transform: translate(-50%, 6px); }
+}
+
+/* ---------- セクション1層(背景は拡大済みタイルがそのまま担う) ---------- */
+
+/* ミサイル演出 iframe(常時操作ON)
+   fixed は禁止: 全画面 fixed iframe は opacity:0 / pointer-events:none でも
+   iOS のタッチ領域キャッシュ(PE を無視する既知バグ)がビューポート全域を
+   「touch-action:none の iframe 領域」と誤認し続け、ステージ外でも
+   タッチスクロールが二度と開始されないフリーズを断続的に起こす
+   (実機HUD: move は cancelable のまま届くが scroll 0px = WebKit が
+   スクロール開始を拒否している状態)。absolute なら領域はステージと共に
+   スクロールアウトする。タッチ入力は親タッチ層からの注入なので
+   iframe 自体のヒットテストは不要(fixed にしていた理由は既に消滅) */
+html.enh .enh-missile {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+/* テキスト(JS が opacity / translateY を駆動) */
+html.enh .enh-s1-inner {
+  position: absolute;
+  z-index: 6;
+  left: 0;
+  right: 0;
+  top: 16vh;
+  margin: 0 auto;
+  width: min(88%, 960px);
+  max-width: 960px;
+  opacity: 0;
+  pointer-events: none;
+  animation: none; /* 素の .fade-in(view() 連動)は無効化して JS 制御に一本化 */
+}
+
+/* ミサイル演出キャプション */
+html.enh .enh-missile-caption {
+  position: absolute;
+  z-index: 7;
+  right: 12px; /* 右に詰める(旧24px)。ブロック内の中央揃え関係は維持 */
+  bottom: 72px;
+  /* 幅を固定: 状態行の文字数変化でブロック幅が変わると、中央揃えの基準が
+     ずれてピクトグラムの位置が状態間で数px動いてしまうため */
+  width: 212px;
+  text-align: center; /* タイトル・サブ・ピクトグラム・状態行を相互に中央揃え */
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+}
+@media (max-width: 768px) {
+  html.enh .enh-missile-caption {
+    right: 4px; /* スマホはさらに右端へ */
+  }
+}
+html.enh .enh-cap-title {
+  margin: 0 0 2px;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: 'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', serif;
+  color: #ffd98a;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
+}
+/* タイトル2行目(サブタイトル): 大きさは cap-text と同じ、色はタイトルと同じ */
+html.enh .enh-cap-sub {
+  margin: 0 0 2px;
+  /* タイトル(15px×13文字)と同じ行幅になるよう 15×13/20文字 = 9.75px */
+  font-size: 9.75px;
+  font-weight: 700;
+  font-family: 'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', serif;
+  color: #ffd98a;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
+}
+/* 接続状態ピクトグラムのレイアウト確保用スペーサー(キャプション内) */
+html.enh .enh-cap-drone-space {
+  display: inline-block;
+  width: 136px;
+  height: 37px;
+  margin: 10px 0 6px;
+}
+/* ピクトグラム本体: sticky 直下の独立レイヤー(キャプション内に置くと
+   opacity/z-index のスタッキングコンテキストで mix-blend-mode が隔離され
+   背景と合成できないため)。位置は JS がスペーサーに同期させる。
+   connected/not_connected は縦横比が僅かに違うため同一ボックス+contain。 */
+html.enh .enh-cap-drone-layer {
+  position: absolute;
+  z-index: 8;
+  width: 136px;
+  height: 37px;
+  object-fit: contain;
+  opacity: 0;
+  pointer-events: none;
+}
+/* 未接続: 黒ピクトグラム → 不透明の明るめ灰色 */
+html.enh .enh-cap-drone--off {
+  filter: invert(0.8);
+}
+/* スマホ: ピクトグラムを一回り小さく(75%)。スペーサーとレイヤーは常に同寸。
+   接続中のcanvas描画はスペーサー矩形に同期しているため自動で追従する */
+@media (max-width: 768px) {
+  html.enh .enh-cap-drone-space,
+  html.enh .enh-cap-drone-layer {
+    width: 102px;
+    height: 28px;
+  }
+}
+/* 接続中の黄金色+screen合成は missile.html が canvas 内で描く(DOM の
+   mix-blend-mode は Safari で iframe 越しの背景に適用されないため) */
+html.enh .enh-cap-text {
+  margin: 0;
+  font-size: 12px;
+  color: #fff;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
+}
+
+/* デバッグHUD(?debug=1 のときのみ JS が生成) */
+html.enh .enh-debug-hud {
+  position: fixed;
+  top: 60px;
+  left: 8px;
+  z-index: 9999;
+  padding: 6px 8px;
+  background: rgba(0, 0, 0, 0.75);
+  color: #9f9;
+  font: 11px/1.5 monospace;
+  white-space: pre-wrap;
+  pointer-events: none;
+  border-radius: 6px;
+}
+
+/* 親側タッチ層(タッチ端末のみ JS が生成。iframe のヒットテストを使わず
+   ここで受けたタッチを missile.html に注入する) */
+html.enh .enh-touch-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  /* touch-action は指定しない: 素通しジェスチャのネイティブスクロールを
+     CSSレベルで妨げないため。捕捉時は JS の preventDefault で止める */
+  background: transparent;
+}

@@ -1,0 +1,1442 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <style>
+    html,body{margin:0;width:100%;height:100%;background:transparent!important;overflow:hidden}
+    #cv{position:fixed;inset:0;width:100%;height:100%;background:transparent!important;touch-action:none}
+    .hud{position:fixed;left:0;right:0;bottom:10px;text-align:center;
+         color:#cfe1ff;font:600 12px -apple-system,Segoe UI,Roboto;
+         text-shadow:0 1px 2px rgba(0,0,0,.6)}
+    @media (pointer:fine){
+      html,body,#cv{cursor:none}
+    }
+  </style>
+</head>
+<body>
+  <canvas id="cv"></canvas>
+
+
+  <script>
+  (()=>{
+  // ===== Basic Parameters =====
+  // 視距離に応じた焦点距離。視野角 Θ = 2·atan((W/2)/FOV)。
+  // PC(520)の見え方を基準に、スマホは近くで持つぶん FOV を下げて Θ を広げる
+  // (端まで振ったときの回転レンジ/レートも上がる)。画面の実寸(小ささ)は入れず
+  // 距離だけ補正する——実寸を入れると小さいスマホで Θ が極端に狭くなるため、
+  // PCの基準を継承する。
+  const FOV_BASE = 520;            // 基準(PC<4K・60cmでこの見え方が整っている)
+  const D_REF = 60;                // 基準視距離(cm) = PC(4K未満)
+  const _touchFOV = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+  // 物理解像度幅の目安。4K以上は外付けディスプレイ＝遠距離と見なす
+  const _screenPxW = (screen.width || 0) * (window.devicePixelRatio || 1);
+  const _is4K = _screenPxW >= 3840;
+  // スマホ判定はタッチかつ画面短辺が小さい端末のみ。iPad等のタブレットは
+  // タッチでも PC 判定(60cm)に入れる(スマホ扱いにすると、短い焦点距離に
+  // 広い画面幅が乗って魚眼になるため)
+  const _isPhone = _touchFOV && Math.min(screen.width || 0, screen.height || 0) < 600;
+  const D_DEVICE = _isPhone ? 35 : (_is4K ? 100 : 60);  // 想定視距離(cm)
+  const FOV = FOV_BASE * D_DEVICE / D_REF;
+  const CAM_FWD_PX_S = 520 * 8;
+  const TARGET_DIST  = 1200 * 9;
+  const MISSILE_SPEED = CAM_FWD_PX_S * 3;
+  const MAX_RANGE = TARGET_DIST * 5;
+  const Z_NEAR = 0.01;
+  const AIM_GAIN = 1.8;
+  const DPR = Math.min(1.2, devicePixelRatio||1);
+
+  // Trail - Settings optimized for background
+  const TRAIL_MAX = 160, TRAIL_MINSTEP = 10;
+  const FADE_HALFLIFE_S = 2.6;
+  const ALPHA_MAX = 0.65, ALPHA_MIN = 0.03, ALPHA_CUTOFF = 0.015; // 透明度を上げて見やすく
+  const SIZE_MIN = 1.0, SIZE_MAX = 14.0, SIZE_K = 1800; // サイズも少し大きく
+
+  // Missile
+  const MISSILE_COUNT = 4, PN_GAIN = 3.4, MAX_TURN_RATE = 3.2;
+  // APN(増強比例航法): 増強項ゲイン N/2、増強項の旋回率寄与上限。
+  // 目標加速度は座標二階差分の生値を使用(急変時の暴れは増強項キャップで抑制)
+  const APN_AUG_GAIN = PN_GAIN * 0.5, APN_AUG_CAP = MAX_TURN_RATE * 0.5;
+  // ターゲット速度・加速度グラフ(画面下部に左右並置): 横軸=時間(直近10s)、
+  // 縦軸=|v_T| [m/s] / |a_T| [m/s²]。座標の差分の生値(EMA平滑化前)をそのまま描く。
+  // 縦軸は固定スケール(オートスケールなし)、超過分は上端でクリップ
+  // 開発用インジケータ: ?graphs=1 の時のみ表示(本番の通常アクセスでは非表示)
+  const SHOW_GRAPHS = /[?&]graphs=1/.test(location.search);
+  const ACC_GRAPH_WINDOW = 3, ACC_GRAPH_H = 60, ACC_GRAPH_MX = 20, ACC_GRAPH_MB = 12, ACC_GRAPH_GAP = 16;
+  const ACC_GRAPH_YMAX = 20000;
+  const SPD_GRAPH_YMAX = 500;
+  // 仮想空間の物理スケール: 追跡ドローン(カメラ)の飛行速度を 40 m/s
+  // (レース用FPVドローン級)と置いて世界座標単位→メートルを定義。
+  // 含意: ターゲット距離≈104m、ミサイル速度≈120m/s
+  const WORLD_M_PER_PX = 40 / CAM_FWD_PX_S;
+  const HIT_RADIUS = 300, RESPAWN_BACK = 200;
+
+  // Color - Additive blending colors optimized for background brightness
+  const palette = {
+    target: {
+      core: a=>`rgba(180,220,255,${a * 1.2})`,
+      halo: a=>`rgba(100,170,255,${a * 1.1})`,
+      line: '140,190,255'
+    },
+    missile:{
+      core: a=>`rgba(255,230,180,${a * 1.2})`,
+      halo: a=>`rgba(255,190,120,${a * 1.1})`,
+      line: '255,200,140'
+    }
+  };
+
+  // Twinkle
+  const TWINKLE_FREQ = 6.5, TWINKLE_AMPL = 0.35;
+  const STAR_RAYS = 6, STAR_LEN = 9, STAR_THICK = 1.0, STAR_ALPHA = 0.18;
+
+  // Explosion (small)
+  const EXP_MAX = 12, EXP_CORE_LIFE = 0.14, EXP_GLOW_LIFE = 0.35;
+  function explosionRadii(scale){ return {coreR: 10 + 16*scale, glowR: 24 + 40*scale}; }
+
+  // ===== Canvas (Main + Overlay) =====
+  const cv = document.getElementById('cv'), ctx = cv.getContext('2d', { alpha:true });
+  const fx = document.createElement('canvas'), fctx = fx.getContext('2d', { alpha:true });
+  const BASE_FADE_ALPHA = 0.06;
+  const FADE_SPEED      = 8;
+  const TRANSPARENT_FADE = true;
+  let fadeAccum = 0;
+  let W = 1, H = 1;
+
+  function resize(){
+    // Get actual CSS-rendered size of canvas element (avoids timing issues with innerWidth/innerHeight)
+    const rect = cv.getBoundingClientRect();
+    const newW = Math.round(rect.width) || innerWidth;
+    const newH = Math.round(rect.height) || innerHeight;
+    if (newW === W && newH === H) return; // No size change
+    W = newW; H = newH;
+    cv.width=W*DPR; cv.height=H*DPR; ctx.setTransform(DPR,0,0,DPR,0,0);
+    fx.width=W*DPR; fx.height=H*DPR; fctx.setTransform(DPR,0,0,DPR,0,0);
+  }
+  addEventListener('resize', resize, {passive:true}); resize();
+
+  // ===== Environment Map =====
+  let envMapImg = null;
+  let envCanvas = null;
+  let envImageData = null;
+
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = function() {
+    envMapImg = img;
+
+    // Create processing canvas for environment map
+    envCanvas = document.createElement('canvas');
+    envCanvas.width = img.width;
+    envCanvas.height = img.height;
+    const envCtx = envCanvas.getContext('2d');
+    envCtx.drawImage(img, 0, 0);
+    envImageData = envCtx.getImageData(0, 0, img.width, img.height);
+  };
+  img.onerror = function(e) {
+    tryNextUrl();
+  };
+
+  const imageUrls = [
+    './thumbnail_11001f6f-0de3-4139-bc2e-55c99a3e9731.png.2048x2048_q85.png.webp',
+    'https://drive.google.com/uc?export=view&id=1evWoksqKjFufYJ1JP8rW1ibuO7cH52u1',
+    'https://drive.google.com/uc?export=download&id=1evWoksqKjFufYJ1JP8rW1ibuO7cH52u1',
+    'https://lh3.googleusercontent.com/d/1evWoksqKjFufYJ1JP8rW1ibuO7cH52u1',
+    './venice_sunset_2k.png'
+  ];
+
+  let urlIndex = 0;
+
+  function tryNextUrl() {
+    if (urlIndex < imageUrls.length) {
+      img.src = imageUrls[urlIndex];
+      urlIndex++;
+    } else {
+      envMapImg = null;
+      envImageData = null;
+    }
+  }
+
+  tryNextUrl();
+
+  // ===== Environment Map Rendering (Optimized for Google Sites) =====
+  // 再利用バッファ: 毎フレーム canvas/ImageData(W*H*4≈数MB)を作り直すと
+  // GC負荷で徐々にカクつくため、初回とリサイズ時のみ確保して使い回す
+  let envRenderCanvas = null, envRenderCtx = null, envRenderData = null;
+  function renderEnvironmentMapBackground() {
+    if (!envMapImg || !envImageData) return false;
+
+    try {
+      if (!envRenderCanvas || envRenderCanvas.width !== W || envRenderCanvas.height !== H) {
+        envRenderCanvas = document.createElement('canvas');
+        envRenderCanvas.width = W;
+        envRenderCanvas.height = H;
+        envRenderCtx = envRenderCanvas.getContext('2d');
+        envRenderData = envRenderCtx.createImageData(W, H);
+      }
+      const tempCanvas = envRenderCanvas;
+      const tempCtx = envRenderCtx;
+      const imageData = envRenderData;
+
+      // Use the same camera coordinate system as missile simulation
+      const cy = Math.cos(cam.yaw);
+      const sy = Math.sin(cam.yaw);
+      const cp = Math.cos(cam.pitch);
+      const sp = Math.sin(cam.pitch);
+
+      // Camera basis vectors (same as camAxes function) - pitch direction reversed
+      const fx = sy * cp;  // Forward
+      const fy = -sp;      // Pitch reversed
+      const fz = cy * cp;
+
+      const rx = cy;       // Right
+      const ry = 0;
+      const rz = -sy;
+
+      const ux = sy * sp;  // Up - pitch reversed
+      const uy = cp;
+      const uz = cy * sp;
+
+      // Balanced resolution for Google Sites (4x4 blocks = 16x faster than pixel-perfect)
+      const STEP = 4; // Process every 4th pixel for good balance of quality and performance
+
+      for (let py = 0; py < H; py += STEP) {
+        for (let px = 0; px < W; px += STEP) {
+          // Use pixel offset from center, divided by FOV constant (same as missile projection)
+          const offsetX = px - W * 0.5;
+          const offsetY = py - H * 0.5;
+
+          // Convert screen offset to ray direction (matching missile simulation)
+          const rayX = offsetX;
+          const rayY = -offsetY; // Y-axis flipped
+          const rayZ = FOV;
+
+          // Transform ray using camera coordinate system (same as missile simulation)
+          const worldX = rayX * rx + rayY * ux + rayZ * fx;
+          const worldY = rayX * ry + rayY * uy + rayZ * fy;
+          const worldZ = rayX * rz + rayY * uz + rayZ * fz;
+
+          // Convert to spherical coordinates
+          const length = Math.sqrt(worldX * worldX + worldY * worldY + worldZ * worldZ);
+          const longitude = Math.atan2(worldX, worldZ);
+          const latitude = Math.asin(Math.max(-1, Math.min(1, worldY / length)));
+
+          // UV coordinates (0-1)
+          const u = (longitude + Math.PI) / (2 * Math.PI);
+          const v = (Math.PI * 0.5 - latitude) / Math.PI; // Corrected vertical orientation
+
+          // Sample from environment map with bilinear interpolation
+          const mapX = u * (envMapImg.width - 1);
+          const mapY = v * (envMapImg.height - 1);
+
+          const x1 = Math.floor(mapX);
+          const y1 = Math.floor(mapY);
+          const x2 = Math.min(x1 + 1, envMapImg.width - 1);
+          const y2 = Math.min(y1 + 1, envMapImg.height - 1);
+
+          const fx_interp = mapX - x1;
+          const fy_interp = mapY - y1;
+
+          // Get 4 pixel colors
+          const getPixel = (x, y) => {
+            const idx = (y * envMapImg.width + x) * 4;
+            return [
+              envImageData.data[idx] || 0,
+              envImageData.data[idx + 1] || 0,
+              envImageData.data[idx + 2] || 0
+            ];
+          };
+
+          const c1 = getPixel(x1, y1);
+          const c2 = getPixel(x2, y1);
+          const c3 = getPixel(x1, y2);
+          const c4 = getPixel(x2, y2);
+
+          // Bilinear interpolation
+          const r = c1[0] * (1-fx_interp) * (1-fy_interp) + c2[0] * fx_interp * (1-fy_interp) + c3[0] * (1-fx_interp) * fy_interp + c4[0] * fx_interp * fy_interp;
+          const g = c1[1] * (1-fx_interp) * (1-fy_interp) + c2[1] * fx_interp * (1-fy_interp) + c3[1] * (1-fx_interp) * fy_interp + c4[1] * fx_interp * fy_interp;
+          const b = c1[2] * (1-fx_interp) * (1-fy_interp) + c2[2] * fx_interp * (1-fy_interp) + c3[2] * (1-fx_interp) * fy_interp + c4[2] * fx_interp * fy_interp;
+
+          // Set pixel block in ImageData for better performance
+          for (let dy = 0; dy < STEP && py + dy < H; dy++) {
+            for (let dx = 0; dx < STEP && px + dx < W; dx++) {
+              const pixelIndex = ((py + dy) * W + (px + dx)) * 4;
+              imageData.data[pixelIndex] = r;
+              imageData.data[pixelIndex + 1] = g;
+              imageData.data[pixelIndex + 2] = b;
+              imageData.data[pixelIndex + 3] = 255;
+            }
+          }
+        }
+      }
+
+      // Draw the processed image to canvas
+      tempCtx.putImageData(imageData, 0, 0);
+      ctx.drawImage(tempCanvas, 0, 0);
+
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  // ===== Fallback Background =====
+  function drawFallbackBackground() {
+    const gradient = ctx.createLinearGradient(0, 0, 0, H);
+    gradient.addColorStop(0, 'rgb(20, 30, 50)');
+    gradient.addColorStop(0.5, 'rgb(40, 50, 70)');
+    gradient.addColorStop(1, 'rgb(10, 20, 40)');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  // ===== Vector & Utilities =====
+  const len = v=>Math.hypot(v.x,v.y,v.z);
+  const sub = (a,b)=>({x:a.x-b.x,y:a.y-b.y,z:a.z-b.z});
+  const addv= (a,b)=>({x:a.x+b.x,y:a.y+b.y,z:a.z+b.z});
+  const mulv= (v,s)=>({x:v.x*s,y:v.y*s,z:v.z*s});
+  const norm = v=>{const m=len(v)||1;return {x:v.x/m,y:v.y/m,z:v.z/m};};
+  function dot(a,b){return a.x*b.x + a.y*b.y + a.z*b.z;}
+  function cross(a,b){
+    return {x:a.y*b.z-a.z*b.y, y:a.z*b.x-a.x*b.z, z:a.x*b.y-a.y*b.x};
+  }
+  function rotateAroundAxis(v, axis, ang){
+    const u = norm(axis), c=Math.cos(ang), s=Math.sin(ang);
+    const d = dot(v,u);
+    return {
+      x: v.x*c + (u.y*v.z-u.z*v.y)*s + u.x*d*(1-c),
+      y: v.y*c + (u.z*v.x-u.x*v.z)*s + u.y*d*(1-c),
+      z: v.z*c + (u.x*v.y-u.y*v.x)*s + u.z*d*(1-c),
+    };
+  }
+  const clamp=(v,minv,maxv)=>Math.max(minv, Math.min(maxv, v));
+  function wrapPi(a){ while(a>Math.PI) a-=2*Math.PI; while(a<-Math.PI) a+=2*Math.PI; return a; }
+
+  // ===== Camera (Yaw/Pitch, no Roll) =====
+  const cam = {x:0,y:0,z:0, yaw:0, pitch:0};
+  function camAxes(){
+    const cy=Math.cos(cam.yaw), sy=Math.sin(cam.yaw);
+    const cp=Math.cos(cam.pitch), sp=Math.sin(cam.pitch);
+    const f = {x: sy*cp, y: sp, z: cy*cp};
+    let r = cross({x:0,y:1,z:0}, f); r = norm(r);
+    const u = cross(f, r);
+    return {f,r,u};
+  }
+  function camDepth(x,y,z){
+    const {f} = camAxes();
+    const dx=x-cam.x, dy=y-cam.y, dz=z-cam.z;
+    return dx*f.x + dy*f.y + dz*f.z;
+  }
+
+  // ===== Projection =====
+  function project(x,y,z){
+    const {f,r,u} = camAxes();
+    const dx = x - cam.x, dy = y - cam.y, dz = z - cam.z;
+    const cx = dx*r.x + dy*r.y + dz*r.z;
+    const cy = dx*u.x + dy*u.y + dz*u.z;
+    const cz = dx*f.x + dy*f.y + dz*f.z;
+    if(cz < Z_NEAR) return {x:W*3,y:H*3,s:0,z:cz};
+    const s=FOV/(FOV+cz);
+    return {x:cx*s + W/2, y:cy*s + H/2, s, z:cz};
+  }
+  function worldDirFromScreenOffset(ox,oy){
+    const {f,r,u} = camAxes();
+    const v = norm({x:ox, y:oy, z:FOV});
+    return norm( addv( addv( mulv(r, v.x), mulv(u, v.y) ), mulv(f, v.z) ) );
+  }
+  function targetFromOffset(ox,oy){
+    // project() の厳密な逆変換(ox,oy は画面中心 W/2,H/2 からのオフセット)。
+    // 旧実装はピンホール型+中心0.45Hで、project()(FOV/(FOV+cz)型+中心0.5H)と
+    // 食い違い、描画ターゲットが常にカーソルの36〜50px下にずれていた
+    // (画面上端に照準を置いてもナビ帯の下までしか上がれない実害)。
+    // 奥行き cz は「カメラからの実距離 = TARGET_DIST」を満たすよう毎フレーム解く。
+    // cz を定数にすると画面端でターゲットが実質約1.7倍遠くなり、ミサイルの
+    // 追跡が鈍って見える(実害)。距離一定なら空間配置は旧実装と同等(端で3%以内)。
+    //   |T|^2 = (ρ/s)^2 + cz^2 = TARGET_DIST^2, s = FOV/(FOV+cz) → cz の二次方程式
+    const {f,r,u} = camAxes();
+    const rho2 = ox*ox + oy*oy;
+    const qa = 1 + rho2/(FOV*FOV);
+    const qb = 2*rho2/FOV;
+    const qc = rho2 - TARGET_DIST*TARGET_DIST;
+    const cz = (-qb + Math.sqrt(qb*qb - 4*qa*qc)) / (2*qa);
+    const s = FOV/(FOV+cz);
+    const cx = ox/s, cy = oy/s;
+    return {x: cam.x + r.x*cx + u.x*cy + f.x*cz,
+            y: cam.y + r.y*cx + u.y*cy + f.y*cz,
+            z: cam.z + r.z*cx + u.z*cy + f.z*cz};
+  }
+  function dist3(ax,ay,az,bx,by,bz){ return Math.hypot(ax-bx, ay-by, az-bz); }
+
+  // ===== Input (PC=cursor tracking / Touch=drag delta x1.8) =====
+  const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints>0);
+  let running = true;
+  let showBackground = false; // Background display flag (default: off)
+
+  // State for glitch effect
+  let glitchActive = false;
+  let glitchStartTime = 0;
+  const GLITCH_DURATION = 0.6; // Glitch duration (seconds)
+  let targetBackgroundState = false; // Target background state (default: off)
+  let glitchTargetCanvas = null; // Cache for transition target image
+
+  // Initial target offset to upper-right for mobile only
+  const INIT_RIGHT_UP = { xRatio: 0.30, yRatio: 0.01 };
+  let pointer   = {active:false, lastX: W*0.5, lastY: H*0.45};
+  let aimOffset = isTouch
+    ? { ox: W * INIT_RIGHT_UP.xRatio, oy: H * INIT_RIGHT_UP.yRatio }
+    : { ox: 0, oy: 0 };
+
+  const USE_CURSOR_AIM = matchMedia('(pointer:fine)').matches;
+  let mouse = {x: W*0.6, y: H*0.3};
+
+  // デバッグ計測(?debug=1 のときだけ親ページのHUDへ統計を送信)
+  const DBG = /[?&]debug=1/.test(location.search);
+  const dbgStat = {ts:0, tm:0, te:0, pd:0, relay:0, raf:0};
+  function dbgPost(){
+    if(!DBG) return;
+    try{
+      parent.postMessage({type:'missileDebug', stat: dbgStat,
+        active: pointer.active, ox: Math.round(aimOffset.ox), oy: Math.round(aimOffset.oy)}, '*');
+    }catch(_){}
+  }
+  if(DBG) setInterval(dbgPost, 500);
+
+  // シングルタップ判定用(ドラッグと区別するため切替は touchend で行う)
+  let tapStart = {x:0, y:0, t:0, moved:false};
+  let lastTouchEnd = 0; // タップ後に iOS が発生させる合成マウスイベントの除外用
+
+  function onDown(e){
+    const t=e.touches?e.touches[0]:e;
+    pointer.active=true; pointer.lastX=t.clientX; pointer.lastY=t.clientY;
+    if(e.touches){
+      dbgStat.ts++;
+      // タッチ: ここでは切り替えない(タップかドラッグかは touchend で確定)
+      tapStart = {x:t.clientX, y:t.clientY, t:Date.now(), moved:false};
+      // 最初の touchmove の dx は捨てる: touchstart→初回 move の空白期間
+      // (タッチ検出遅延)に指が動いた分が一括計上され、1フレームの
+      // 速度スパイク(実測で正常時の4倍超)になるため
+      pointer.firstMove = true;
+      return;
+    }
+    if(Date.now() - lastTouchEnd < 700) return; // タップ直後の合成 mousedown を無視
+    triggerCameraToggle(); // PC: シングルクリックで切替
+  }
+
+  function triggerCameraToggle(){
+    {
+      // Single click (PC) / Single tap (mobile): Start glitch effect
+      targetBackgroundState = !showBackground;
+      // 親ページへカメラ状態を通知(キャプション表示の切替に使う)
+      if(window.parent && window.parent !== window){
+        try{ window.parent.postMessage({type:'missileState', bg: targetBackgroundState}, '*'); }catch(_){}
+      }
+
+      // Pre-render transition target image offscreen
+      glitchTargetCanvas = document.createElement('canvas');
+      glitchTargetCanvas.width = W;
+      glitchTargetCanvas.height = H;
+      const targetCtx = glitchTargetCanvas.getContext('2d');
+
+      if (targetBackgroundState) {
+        // When turning background ON: Pre-render background image
+        targetCtx.fillStyle = 'black';
+        targetCtx.fillRect(0, 0, W, H);
+
+        targetCtx.globalCompositeOperation = 'source-over';
+        if (envMapImg && envMapImg.complete) {
+          const yaw = cam.yaw, pitch = cam.pitch;
+          const cy = Math.cos(yaw), sy = Math.sin(yaw);
+          const cp = Math.cos(pitch), sp = Math.sin(pitch);
+          const fx = sy * cp, fy = -sp, fz = cy * cp;
+          const rx = cy, ry = 0, rz = -sy;
+          const ux = sy * sp, uy = cp, uz = cy * sp;
+
+          const STEP = 16; // より大きなステップで高速化
+          for (let py = 0; py < H; py += STEP) {
+            for (let px = 0; px < W; px += STEP) {
+              const offsetX = px - W * 0.5, offsetY = py - H * 0.5;
+              const rayX = offsetX, rayY = -offsetY, rayZ = FOV;
+              const worldX = rayX * rx + rayY * ux + rayZ * fx;
+              const worldY = rayX * ry + rayY * uy + rayZ * fy;
+              const worldZ = rayX * rz + rayY * uz + rayZ * fz;
+              const length = Math.sqrt(worldX * worldX + worldY * worldY + worldZ * worldZ);
+              const longitude = Math.atan2(worldX, worldZ); // 修正: 引数の順序を通常レンダリングと一致
+              const latitude = Math.asin(Math.max(-1, Math.min(1, worldY / length)));
+              const u = (longitude + Math.PI) / (2 * Math.PI);
+              const v = (Math.PI * 0.5 - latitude) / Math.PI; // 修正: 通常レンダリングと一致
+              const imgX = Math.floor(u * envMapImg.width);
+              const imgY = Math.floor(v * envMapImg.height);
+              targetCtx.drawImage(envMapImg, imgX, imgY, 1, 1, px, py, STEP, STEP);
+            }
+          }
+          targetCtx.globalCompositeOperation = 'screen';
+          targetCtx.fillStyle = 'rgba(40, 40, 40, 0.3)';
+          targetCtx.fillRect(0, 0, W, H);
+        }
+      }
+      // When turning background OFF: Keep transparent (no rendering)
+
+      glitchActive = true;
+      glitchStartTime = performance.now() / 1000;
+    }
+  }
+  function onMove(e){
+    if(USE_CURSOR_AIM){
+      const t=e.touches?e.touches[0]:e;
+      mouse.x = t.clientX; mouse.y = t.clientY;
+    }else{
+      if(!pointer.active) return;
+      const t=e.touches?e.touches[0]:e;
+      if(e.touches && !tapStart.moved &&
+         Math.hypot(t.clientX - tapStart.x, t.clientY - tapStart.y) > 12){
+        tapStart.moved = true; // 12px以上動いたらドラッグ(タップではない)
+      }
+      // 初回 touchmove: 蓄積分を照準に入れず基準座標の更新のみ
+      // (preventDefault は必要——ここで抑止しないとスワイプ全体をブラウザが接収する)
+      if (pointer.firstMove) {
+        pointer.firstMove = false;
+        if (e.cancelable) { e.preventDefault(); dbgStat.pd++; }
+        pointer.lastX = t.clientX;
+        pointer.lastY = t.clientY;
+        return;
+      }
+      const dx = t.clientX - pointer.lastX;
+      const dy = t.clientY - pointer.lastY;
+
+      const maxX = W*1.2, maxY = H*0.5;
+
+      // Calculate new offset value (before clamp)
+      const newOx = aimOffset.ox + dx * AIM_GAIN;
+      const newOy = aimOffset.oy + dy * AIM_GAIN;
+
+      // Check if reached vertical edge
+      const atTopLimit = (aimOffset.oy <= -maxY && dy < 0);
+      const atBottomLimit = (aimOffset.oy >= maxY && dy > 0);
+      const atVerticalLimit = atTopLimit || atBottomLimit;
+
+      // 常に既定動作を抑止する。最初の touchmove で preventDefault しないと
+      // ブラウザがそのスワイプ全体をスクロール操作として接収し、以後この
+      // ジェスチャ中はミサイル操作不能+ページが横に動く。縦限界時の
+      // ページスクロールは下の postMessage ブリッジ経由で行う。
+      if (e.cancelable) { e.preventDefault(); dbgStat.pd++; }
+      dbgStat.tm++;
+
+      if (!atVerticalLimit) {
+        // Within range: Prioritize missile control
+        aimOffset.ox = clamp(newOx, -maxX, maxX);
+        aimOffset.oy = clamp(newOy, -maxY, maxY);
+      } else {
+        // 縦限界: 横方向の照準は引き続き更新し、縦分だけページスクロールへ中継
+        aimOffset.ox = clamp(newOx, -maxX, maxX);
+        if(window.parent && window.parent !== window){
+          dbgStat.relay++;
+          window.parent.postMessage({
+            type: 'missileScroll',
+            deltaY: -dy
+          }, '*');
+        }
+      }
+
+      pointer.lastX = t.clientX;
+      pointer.lastY = t.clientY;
+    }
+  }
+  function onUp(e){
+    pointer.active=false;
+    if(e && e.changedTouches && e.changedTouches[0]){
+      dbgStat.te++;
+      lastTouchEnd = Date.now();
+      const t = e.changedTouches[0];
+      const quick = (lastTouchEnd - tapStart.t) < 350;
+      const still = !tapStart.moved &&
+        Math.hypot(t.clientX - tapStart.x, t.clientY - tapStart.y) < 12;
+      if(quick && still) triggerCameraToggle(); // シングルタップで切替
+    }
+  }
+
+  // 親ページからの入力注入口(iOS Safari は動的に pointer-events を変えた
+  // iframe へのタッチ配送を更新しないため、タッチは親側の透明レイヤーで受け、
+  // 同一オリジンの関数呼び出しでここに注入する)
+  window.__missileInput = {
+    down: function(x, y){ onDown({touches:[{clientX:x, clientY:y}]}); },
+    move: function(x, y){ onMove({touches:[{clientX:x, clientY:y}], cancelable:false}); },
+    up:   function(x, y){ onUp({changedTouches:[{clientX:x, clientY:y}]}); }
+  };
+
+  // 親ページのキャプション用: 接続中ピクトグラムを canvas 内で screen 合成して
+  // 描く(DOM の mix-blend-mode は Safari では iframe 越しの背景に適用されない
+  // ため、同一 canvas 内で合成するのが唯一確実な方法)。座標・透明度・状態は
+  // 親がスペーサー要素の位置から同期してくる。
+  const capBadge = {x: 0, y: 0, w: 0, h: 0, alpha: 0, on: false};
+  window.__capBadge = function (x, y, w, h, alpha, on) {
+    capBadge.x = x; capBadge.y = y; capBadge.w = w; capBadge.h = h;
+    capBadge.alpha = alpha; capBadge.on = !!on;
+  };
+  let capTinted = null;
+  {
+    const selfV = (location.search.match(/[?&]v=([^&]+)/) || [])[1] || '';
+    const im = new Image();
+    im.onload = function () {
+      const oc = document.createElement('canvas');
+      oc.width = im.width; oc.height = im.height;
+      const c = oc.getContext('2d');
+      c.drawImage(im, 0, 0);
+      c.globalCompositeOperation = 'source-atop'; // 絵柄のアルファを保ったまま着色
+      c.fillStyle = '#ffd98a';                    // タイトル文字色と同じ黄金色
+      c.fillRect(0, 0, oc.width, oc.height);
+      capTinted = oc;
+    };
+    im.src = 'images/drone_connected.png' + (selfV ? '?v=' + selfV : '');
+  }
+
+  cv.addEventListener('touchstart', onDown, {passive:true});
+  cv.addEventListener('touchmove',  onMove, {passive:false});
+  cv.addEventListener('touchend',   onUp,   {passive:true});
+  cv.addEventListener('touchcancel', function(){ pointer.active = false; }, {passive:true});
+  cv.addEventListener('mousedown',  onDown);
+  addEventListener('mousemove', onMove);
+  addEventListener('mouseup',   onUp);
+
+  // ===== Trail =====
+  function pushTrail(arr, lastPt, p, tsec, gen=0){
+    if(!lastPt || dist3(p.x,p.y,p.z, lastPt.x,lastPt.y,lastPt.z)>TRAIL_MINSTEP){
+      arr.push({x:p.x,y:p.y,z:p.z,t:tsec,gen});
+      if(arr.length>TRAIL_MAX) arr.shift();
+      return {x:p.x,y:p.y,z:p.z};
+    }
+    return lastPt;
+  }
+  function cleanTrail(arr, tsec){
+    for(let i=0;i<arr.length;){
+      const p=arr[i];
+      const alpha = Math.max(ALPHA_MIN, ALPHA_MAX*Math.pow(0.5,(tsec-p.t)/FADE_HALFLIFE_S));
+      const cz = camDepth(p.x,p.y,p.z);
+      if(cz <= 0 || alpha<ALPHA_CUTOFF) arr.splice(i,1);
+      else i++;
+    }
+  }
+  function drawTrailAdditivePoints(arr, tsec, colorFn, sizeMul=1){
+    if(arr.length===0) return;
+    const prevComp = ctx.globalCompositeOperation;
+    ctx.globalCompositeOperation = 'lighter';
+    for(const P of arr){
+      const pr = project(P.x,P.y,P.z);
+      if(pr.s<=0) continue;
+      const d = Math.max(1, dist3(P.x,P.y,P.z, cam.x,cam.y,cam.z));
+      let r = (SIZE_K / d) * sizeMul;
+      r = Math.max(SIZE_MIN, Math.min(SIZE_MAX, r));
+      const a = Math.max(ALPHA_MIN, ALPHA_MAX*Math.pow(0.5,(tsec-P.t)/FADE_HALFLIFE_S));
+      ctx.fillStyle = colorFn(a*0.9);
+      ctx.beginPath(); ctx.arc(pr.x, pr.y, r, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.globalCompositeOperation = prevComp;
+  }
+  function drawTrailAdditiveLines(arr, tsec, baseRGBA='180,220,255', lineScale=1.0, sizeMul=1){
+    if(arr.length<2) return;
+    const prevComp = ctx.globalCompositeOperation;
+    ctx.globalCompositeOperation = 'lighter';
+    for(let i=1;i<arr.length;i++){
+      const A=arr[i-1], B=arr[i];
+      if(A.gen!==undefined && B.gen!==undefined && A.gen!==B.gen) continue;
+      const pa=project(A.x,A.y,A.z), pb=project(B.x,B.y,B.z);
+      if(pa.s<=0 || pb.s<=0) continue;
+      const da=Math.max(1, dist3(A.x,A.y,A.z, cam.x,cam.y,cam.z));
+      const db=Math.max(1, dist3(B.x,B.y,B.z, cam.x,cam.y,cam.z));
+      const rA = Math.max(SIZE_MIN, Math.min(SIZE_MAX, (SIZE_K/da)*sizeMul));
+      const rB = Math.max(SIZE_MIN, Math.min(SIZE_MAX, (SIZE_K/db)*sizeMul));
+      const w = (rA + rB) * 0.5 * 0.9 * lineScale;
+      const aA = Math.max(ALPHA_MIN, ALPHA_MAX*Math.pow(0.5,(tsec-A.t)/FADE_HALFLIFE_S));
+      const aB = Math.max(ALPHA_MIN, ALPHA_MAX*Math.pow(0.5,(tsec-B.t)/FADE_HALFLIFE_S));
+      const alpha = (aA + aB) * 0.6;
+      ctx.lineWidth = w;
+      ctx.strokeStyle = `rgba(${baseRGBA},${alpha})`;
+      ctx.beginPath(); ctx.moveTo(pa.x,pa.y); ctx.lineTo(pb.x,pb.y); ctx.stroke();
+    }
+    ctx.globalCompositeOperation = prevComp;
+  }
+
+  // ===== Light Point/HUD =====
+  function twinkle(t, seed){
+    return 1 - TWINKLE_AMPL + TWINKLE_AMPL * (0.5 + 0.5 * Math.sin((t+seed)*TWINKLE_FREQ*2*Math.PI));
+  }
+  function drawStarGlow(gc, x,y,scale,alpha,colors,seed,t){
+    const prev = gc.globalCompositeOperation;
+    gc.globalCompositeOperation='lighter';
+    const k = twinkle(t, seed);
+    const coreR = 2.6*scale * (0.85+0.3*k);
+    const haloR = coreR * (1.9 + 1.0*k);
+    let g = gc.createRadialGradient(x,y,coreR*0.15, x,y, coreR);
+    g.addColorStop(0.0, colors.core(0.95*alpha));
+    g.addColorStop(1.0, colors.core(0.30*alpha));
+    gc.fillStyle = g; gc.beginPath(); gc.arc(x,y, coreR,0,Math.PI*2); gc.fill();
+    g = gc.createRadialGradient(x,y,haloR*0.15, x,y, haloR);
+    g.addColorStop(0.0, colors.halo(0.40*alpha));
+    g.addColorStop(1.0, colors.halo(0.00));
+    gc.fillStyle = g; gc.beginPath(); gc.arc(x,y, haloR,0,Math.PI*2); gc.fill();
+    gc.lineWidth = STAR_THICK;
+    gc.strokeStyle = colors.core(STAR_ALPHA*alpha);
+    for(let i=0;i<STAR_RAYS;i++){
+      const th = (i/STAR_RAYS)*Math.PI*2 + seed*1.2;
+      const len = (STAR_LEN*scale) * (0.7 + 0.6*k);
+      gc.beginPath();
+      gc.moveTo(x - Math.cos(th)*len*0.15, y - Math.sin(th)*len*0.15);
+      gc.lineTo(x + Math.cos(th)*len,      y + Math.sin(th)*len);
+      gc.stroke();
+    }
+    gc.globalCompositeOperation=prev;
+  }
+
+  // ===== Lens Flare & Ghost (Optimized for background) =====
+  const FLARE = {
+    enable: true,
+    baseSize: 90,          // 少し大きく
+    streakLen: 480,        // ストリークを長く
+    streakThick: 20        // 厚くして見やすく
+  };
+  // ゴースト定義(実写の逆光写真を参考に3個/光源):
+  //   近: 小さな淡い暖色の円盤 / 中: 緑がかった中型の円盤 /
+  //   遠: 最大の、縁だけ明るい中空の青いリング
+  // k: 光源→レンズ中心方向の位置(1=中心対称点を通過する係数)。
+  // size: グロー半径比。tint: コーティング由来の色(光源色と混合)。
+  const GHOSTS = [
+    { k: 0.45, size: 0.38, ring: false, tint: [255, 235, 215], a: 1.0 },
+    { k: 0.85, size: 0.75, ring: false, tint: [170, 235, 210], a: 0.8 },
+    { k: 1.45, size: 1.90, ring: true,  tint: [160, 215, 255], a: 0.6 },
+  ];
+
+  // 360度画像(equirect)を解析して得た太陽位置(画素980,513 / 2000x1000)。
+  // 実レンダリング上の太陽飽和核の重心からキャリブレーション済み。
+  // 雲中の輝点(1213,392)はノイズとして除外。
+  const SUN_UV = { u: 0.4901, v: 0.5132 };
+  const SUN_DIR = (() => {
+    const lon = SUN_UV.u * 2 * Math.PI - Math.PI;      // サンプラの逆変換
+    const lat = Math.PI * 0.5 - SUN_UV.v * Math.PI;
+    return { x: Math.sin(lon) * Math.cos(lat), y: Math.sin(lat), z: Math.cos(lon) * Math.cos(lat) };
+  })();
+  // 太陽方向をスクリーンへ投影。renderEnvironmentMapBackground と同一の
+  // カメラ基底・FOVを使うため、背景に描かれる太陽と厳密に一致する。
+  // 背面(dz<=0)なら null。
+  function projectSunDir(){
+    const cy = Math.cos(cam.yaw), sy = Math.sin(cam.yaw);
+    const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
+    const fX = sy*cp, fY = -sp,  fZ = cy*cp;   // 環境マップと同じ(pitch反転)基底
+    const rX = cy,    rY = 0,    rZ = -sy;
+    const uX = sy*sp, uY = cp,   uZ = cy*sp;
+    const dz = SUN_DIR.x*fX + SUN_DIR.y*fY + SUN_DIR.z*fZ;
+    if (dz <= 0.02) return null;
+    const dx = SUN_DIR.x*rX + SUN_DIR.y*rY + SUN_DIR.z*rZ;
+    const dy = SUN_DIR.x*uX + SUN_DIR.y*uY + SUN_DIR.z*uZ;
+    return { x: W*0.5 + FOV*dx/dz, y: H*0.5 - FOV*dy/dz };
+  }
+
+  // baseRGB: 'r,g,b' format (e.g. '160,210,255')
+  // ghostGain: ゴーストの不透明度倍率(既定1)。太陽=4(明るい空でも見える強さ)、
+  // ミサイル/ターゲット=0.35(すごく薄く)
+  // noHalo: 光源の周囲のハロー環を描かない(ミサイル/ターゲット用。
+  // ハローは太陽のような強い光源だけの演出とする)
+  function drawLensFlare(gc, x, y, intensity, t, baseRGB, ghostGain, noHalo){
+    if(!FLARE.enable || intensity<=0) return;
+    const prev = gc.globalCompositeOperation;
+    gc.globalCompositeOperation = 'lighter';
+
+    const cx = W*0.5, cy = H*0.5;
+    const dx = x - cx, dy = y - cy;
+    const dist = Math.hypot(dx,dy);
+
+    // Weaken when near off-screen
+    const edgeAtten = Math.max(0, 1 - (dist / Math.hypot(cx, cy)));
+    // 明滅はゆっくり(周期約4秒)
+    const flick = 0.45 + 0.15*Math.sin(t*1.5);
+    const I = intensity * flick * edgeAtten;
+
+    // Center glow (color tuning)
+    const glowR = FLARE.baseSize * (0.6 + 0.9*I);
+    let g = gc.createRadialGradient(x,y,0, x,y, glowR);
+    g.addColorStop(0.0, `rgba(${baseRGB},${0.34*I})`);
+    g.addColorStop(0.35,`rgba(${baseRGB},${0.24*I})`);
+    g.addColorStop(1.0, `rgba(${baseRGB},0)`);
+    gc.fillStyle = g; gc.beginPath(); gc.arc(x,y, glowR, 0, Math.PI*2); gc.fill();
+
+    if (!noHalo) {
+      // 多層ハロー: レンズ内の多層反射による固定半径の同心円群。
+      // 円の輪郭(半径)は光量で動かさない。光源がレンズ中心に近づく=
+      // 入射光が増えるほど、外側の層まで映り込む(映る範囲だけが広がる)。
+      // th: その層が映り始める光量しきい値(光量 L=中心整列度)
+      const L = edgeAtten;
+      // 全体ゲイン: 整列度Lの3乗で指数的に立ち上がる。
+      // 太陽から外れている時はほぼ消え、正対で最大0.7(従来最大の7割)
+      const haloGain = 0.7 * Math.pow(L, 3);
+      const haloBase = FLARE.baseSize * 1.4; // 固定基準半径(明滅・光量に非依存)
+      const HALO_LAYERS = [
+        { r: 1.00, th: 0.00, a: 0.100 },
+        { r: 1.45, th: 0.30, a: 0.085 },
+        { r: 1.95, th: 0.55, a: 0.070 },
+        { r: 2.50, th: 0.75, a: 0.060 },
+      ];
+      for (let hi = 0; hi < HALO_LAYERS.length && haloGain > 0.002; hi++) {
+        const Ld = HALO_LAYERS[hi];
+        const vis = Math.max(0, Math.min(1, (L - Ld.th) / 0.12)); // 立ち上がり
+        if (vis <= 0) continue;
+        const hr = haloBase * Ld.r;
+        const ha = Ld.a * vis * intensity * flick * haloGain;
+        // 内側にも薄い明るみを持たせ、縁のピークも抑えて
+        // 縁と内側のコントラストを弱める
+        const hg = gc.createRadialGradient(x,y,0, x,y, hr);
+        hg.addColorStop(0.00, `rgba(${baseRGB},${0.22*ha})`);
+        hg.addColorStop(0.55, `rgba(${baseRGB},${0.30*ha})`);
+        hg.addColorStop(0.92, `rgba(${baseRGB},${0.75*ha})`);
+        hg.addColorStop(1.00, `rgba(${baseRGB},0)`);
+        gc.fillStyle = hg; gc.beginPath(); gc.arc(x,y, hr, 0, Math.PI*2); gc.fill();
+      }
+    }
+
+    // Horizontal anamorphic streak (same color)
+    const sLen = FLARE.streakLen * (0.5 + I);
+    const sTh  = FLARE.streakThick * (0.7 + 0.6*I);
+    const sx0 = x - sLen/2, sx1 = x + sLen/2;
+    const sy0 = y - sTh/2;
+    let lg = gc.createLinearGradient(sx0, y, sx1, y);
+    lg.addColorStop(0.00, `rgba(${baseRGB},0)`);
+    lg.addColorStop(0.45, `rgba(${baseRGB},${0.18*I})`);
+    lg.addColorStop(0.50, `rgba(255,255,255,${0.30*I})`);
+    lg.addColorStop(0.55, `rgba(${baseRGB},${0.18*I})`);
+    lg.addColorStop(1.00, `rgba(${baseRGB},0)`);
+    gc.fillStyle = lg; gc.fillRect(sx0, sy0, sLen, sTh);
+
+    // Ghost (光源とレンズ中心を結ぶ直線上、中心を挟んだ反対側に3個)
+    // 実写準拠: 白いコアは持たず、彩度低めの半透明。最遠は中空のリング。
+    // サイズは明滅(I)に連動させず、光源がレンズ中心に近いほど
+    // 緩やかに小さくなる(輪郭の脈動もこれで消える)。
+    const distN = Math.min(1, dist / Math.hypot(cx, cy)); // 0=中心, 1=隅
+    const gBase = FLARE.baseSize * (0.80 + 0.35 * distN);
+    const [br, bg2, bb] = baseRGB.split(',').map(Number);
+    for(let i=0;i<GHOSTS.length;i++){
+      const G = GHOSTS[i];
+      const gx = cx - dx * G.k;
+      const gy = cy - dy * G.k;
+      const gSize = gBase * G.size;
+      const a = 0.22 * (ghostGain || 1) * I * G.a;
+      // コーティング色 70% + 光源色 30% の混合
+      const cr = Math.round(G.tint[0]*0.7 + br*0.3);
+      const cg = Math.round(G.tint[1]*0.7 + bg2*0.3);
+      const cb = Math.round(G.tint[2]*0.7 + bb*0.3);
+      const col = cr + ',' + cg + ',' + cb;
+      // 色収差: 内側は青寄り、外縁は赤(マゼンタ)寄りに強めにずらす
+      const colIn  = Math.round(cr*0.65) + ',' + Math.round(cg*0.90) + ',' + Math.min(255, Math.round(cb*1.35));
+      const colOut = Math.min(255, Math.round(cr*1.45)) + ',' + Math.round(cg*0.75) + ',' + Math.round(cb*0.90);
+      const gg = gc.createRadialGradient(gx,gy,0, gx,gy,gSize);
+      if (G.ring) {
+        // 中空リング: 内側も少し明るく(縁とのコントラスト弱め)。
+        // エッジはシャープに、縁の内外で色をずらす
+        gg.addColorStop(0.00, `rgba(${colIn},${0.10*a})`);
+        gg.addColorStop(0.70, `rgba(${colIn},${0.16*a})`);
+        gg.addColorStop(0.86, `rgba(${col},${0.42*a})`);
+        gg.addColorStop(0.95, `rgba(${colOut},${0.26*a})`);
+        gg.addColorStop(1.00, `rgba(${colOut},0)`);
+      } else {
+        // 円盤: 本体は均一、縁は狭い帯で色収差フリンジを付けてシャープに落とす
+        gg.addColorStop(0.00, `rgba(${col},${0.50*a})`);
+        gg.addColorStop(0.74, `rgba(${col},${0.46*a})`);
+        gg.addColorStop(0.90, `rgba(${colOut},${0.30*a})`);
+        gg.addColorStop(1.00, `rgba(${colOut},0)`);
+      }
+      gc.fillStyle = gg; gc.beginPath(); gc.arc(gx,gy,gSize,0,Math.PI*2); gc.fill();
+    }
+
+    gc.globalCompositeOperation = prev;
+  }
+
+  // ===== Missile =====
+  const missiles = [];
+  function spawnMissile(i, gen=0){
+    const lateral = (i-1.5)*12 + (Math.random()-0.5)*6;
+    const {r,u,f} = camAxes();
+    const pos = addv({x:cam.x,y:cam.y,z:cam.z},
+                     addv( mulv(r, lateral*0.6), mulv(u, lateral*0.2) ));
+    let vdir = {x:f.x, y:f.y, z:f.z};
+    const yaw   = (i-1.5) * 0.05 + (Math.random()-0.5)*0.05;
+    const pitch = ((i%2===0 ? -1 : 1) * 0.025) + (Math.random()-0.5)*0.04;
+    vdir = rotateAroundAxis(vdir, u, yaw);
+    vdir = rotateAroundAxis(vdir, r, pitch);
+    // i=1,3 は増強比例航法(APN)機。lateral配置で左右に1発ずつPN/APNが混在する
+    return {pos, vdir: norm(vdir), uPrev:null, trail:[], lastTrailPt:null, seed: Math.random()*1000, gen, apn: (i%2===1)};
+  }
+  function initMissiles(){ missiles.length = 0; for(let i=0;i<MISSILE_COUNT;i++) missiles.push(spawnMissile(i,0)); }
+  initMissiles();
+
+  // APN用: 目標加速度(座標の二階差分の生値。グラフと同一の取得方式)
+  let tgtPrev = null, tgtVel = null, tgtAcc = {x:0,y:0,z:0};
+  // グラフ用: 生の|a_T|・|v_T|履歴 {t, a}
+  const accHist = [], spdHist = [];
+
+  // ===== Explosion =====
+  const expl = [];
+  function spawnExplosion(pos, now, type){
+    if(expl.length>=EXP_MAX) expl.shift();
+    expl.push({x:pos.x,y:pos.y,z:pos.z,t0:now,type});
+  }
+  function drawExplosions(now){
+    for(let i=0;i<expl.length;i++){
+      const e = expl[i], p = project(e.x,e.y,e.z);
+      if(p.s<=0) continue;
+      const t = now - e.t0, scale = 1 + 1.2*p.s;
+      const {coreR, glowR} = explosionRadii(scale);
+      const cset = palette[e.type] || palette.target;
+      const coreAlive = t < EXP_CORE_LIFE;
+      const glowAlive = t < EXP_GLOW_LIFE;
+
+      if(coreAlive){
+        const u = 1 - (t/EXP_CORE_LIFE);
+        const r = coreR * (0.8 + 0.4*u);
+        const g = ctx.createRadialGradient(p.x,p.y,0, p.x,p.y,r);
+        g.addColorStop(0.0, cset.core(0.95*u));
+        g.addColorStop(0.6, cset.core(0.45*u));
+        g.addColorStop(1.0, cset.core(0.0));
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x,p.y,r,0,Math.PI*2); ctx.fill();
+
+        // 爆発コアに同色フレア（fx）
+        const flareRGB = cset.line;
+        drawLensFlare(fctx, p.x, p.y, Math.min(1.0, 0.9*u*(0.8+0.8*p.s)), now, flareRGB, 1, true);
+      }
+      if(glowAlive){
+        const u = 1 - (t/EXP_GLOW_LIFE);
+        const r = glowR * (0.6 + 0.6*u);
+        const g = ctx.createRadialGradient(p.x,p.y,0, p.x,p.y,r);
+        g.addColorStop(0.0, cset.halo(0.45*u));
+        g.addColorStop(1.0, cset.halo(0.0));
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x,p.y, r,0,Math.PI*2); ctx.fill();
+
+        const flareRGB = cset.line;
+        drawLensFlare(fctx, p.x, p.y, 0.45*u*(0.8+0.6*p.s), now, flareRGB, 1, true);
+      }
+    }
+    for(let i=0;i<expl.length;){ if(now - expl[i].t0 > EXP_GLOW_LIFE) expl.splice(i,1); else i++; }
+  }
+
+  // ===== Camera Rotation =====
+  const YAW_PITCH_GAIN = 1.0;
+  const YAW_RATE_MAX   = 0.6;
+  const PITCH_RATE_MAX = 0.5;
+  const PITCH_MIN = -Math.PI/3, PITCH_MAX = Math.PI/3;
+  function steerCameraToward(target){
+    const dir = norm( sub(target, {x:cam.x,y:cam.y,z:cam.z}) );
+    const yaw_d   = Math.atan2(dir.x, dir.z);
+    const pitch_d = Math.asin( clamp(dir.y, -1, 1) );
+    let dyaw   = wrapPi(yaw_d - cam.yaw);
+    let dpitch = clamp(pitch_d - cam.pitch, -Math.PI, Math.PI);
+    const yawRate   = clamp(dyaw * YAW_PITCH_GAIN,   -YAW_RATE_MAX,   YAW_RATE_MAX);
+    const pitchRate = clamp(dpitch * YAW_PITCH_GAIN, -PITCH_RATE_MAX, PITCH_RATE_MAX);
+    return {yawRate, pitchRate};
+  }
+
+  // ===== Loop =====
+  let last = performance.now();
+  const tgtTrail = []; let lastTgt = null;
+
+  // グラフストリップ1枚を描く。最新サンプルが右端、左端が-10s
+  function drawGraphStrip(now, hist, yMax, label, unit, color, gx, gw, gy, gh){
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.fillRect(gx, gy, gw, gh);
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(gx+0.5, gy+0.5, gw-1, gh-1);
+    // 1秒間隔の縦グリッド + 中間値(yMax/2)の横グリッド
+    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+    ctx.beginPath();
+    for(let s=1;s<ACC_GRAPH_WINDOW;s++){
+      const x = gx + gw - (s/ACC_GRAPH_WINDOW)*gw;
+      ctx.moveTo(x, gy); ctx.lineTo(x, gy+gh);
+    }
+    const yMid = gy + gh - 2 - 0.5*(gh - 16);
+    ctx.moveTo(gx, yMid); ctx.lineTo(gx+gw, yMid);
+    ctx.stroke();
+    // 波形
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    let started = false;
+    for(let i=0;i<hist.length;i++){
+      const p = hist[i];
+      const x = gx + gw - ((now - p.t)/ACC_GRAPH_WINDOW)*gw;
+      if(x < gx) continue;
+      const y = gy + gh - 2 - Math.min(p.a, yMax)/yMax*(gh - 16);
+      if(!started){ ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    // ラベル + リアルタイム現在値(右上)、時間窓表記は右下
+    ctx.fillStyle = 'rgba(255,255,255,0.65)';
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillText(label, gx+6, gy+4);
+    ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
+    ctx.fillText('← '+ACC_GRAPH_WINDOW+'s', gx+gw-6, gy+gh-3);
+    if (hist.length) {
+      ctx.fillStyle = 'rgba(255,255,255,0.95)';
+      ctx.font = 'bold 12px monospace';
+      ctx.textBaseline = 'top';
+      ctx.fillText(Math.round(hist[hist.length-1].a).toLocaleString('en-US') + ' ' + unit,
+                   gx+gw-6, gy+4);
+    }
+  }
+
+  // ターゲット速度(左)・加速度(右)グラフを画面下部に並置
+  function drawTgtGraphs(now){
+    if(accHist.length < 2) return;
+    const gw = Math.floor((W - ACC_GRAPH_MX*2 - ACC_GRAPH_GAP) / 2);
+    if(gw < 80) return;
+    const gh = ACC_GRAPH_H, gy = H - ACC_GRAPH_MB - gh;
+    ctx.save();
+    drawGraphStrip(now, spdHist, SPD_GRAPH_YMAX, '|v_T| m/s  [0-'+SPD_GRAPH_YMAX+']', 'm/s',
+                   'rgba(150,230,170,0.9)', ACC_GRAPH_MX, gw, gy, gh);
+    drawGraphStrip(now, accHist, ACC_GRAPH_YMAX, '|a_T| m/s²  [0-'+ACC_GRAPH_YMAX+']', 'm/s²',
+                   'rgba(140,190,255,0.9)', ACC_GRAPH_MX + gw + ACC_GRAPH_GAP, gw, gy, gh);
+    ctx.restore();
+  }
+
+  function step(nowMS){
+    // Detect iframe layout changes and resize canvas (early return if no size change)
+    resize();
+    const now = nowMS/1000;
+    const dt  = Math.min(0.5, (now - last/1000)); last = nowMS;
+
+    // Update glitch effect
+    if (glitchActive) {
+      const elapsed = now - glitchStartTime;
+      const progress = Math.min(1.0, elapsed / GLITCH_DURATION);
+
+      if (progress >= 1.0) {
+        // Glitch complete
+        glitchActive = false;
+        showBackground = targetBackgroundState;
+        glitchTargetCanvas = null; // Clear cache
+      }
+    }
+
+    // Clear canvas first
+    if (showBackground) {
+      ctx.fillStyle = 'black';
+      ctx.fillRect(0, 0, W, H);
+    } else {
+      // Clear background to transparent
+      ctx.clearRect(0, 0, W, H);
+    }
+
+    // ===== ENVIRONMENT MAP BACKGROUND WITH ADJUSTED BRIGHTNESS =====
+    if (showBackground) {
+      ctx.globalCompositeOperation = 'source-over';
+      if (!renderEnvironmentMapBackground()) {
+        drawFallbackBackground();
+      }
+
+      // Apply brightness enhancement for better visibility
+      ctx.globalCompositeOperation = 'screen';
+      ctx.fillStyle = 'rgba(40, 40, 40, 0.3)'; // Brighten background slightly
+      ctx.fillRect(0, 0, W, H);
+      ctx.globalCompositeOperation = 'source-over';
+    }
+
+    // Draw glitch effect (overlay transition target tiles during transition)
+    if (glitchActive) {
+      drawGlitchEffect(now);
+    }
+
+    // --- fx: Transparent fade (destination-out) ---
+    const c_per_sec = 1 - Math.pow(1 - BASE_FADE_ALPHA, 60);
+    const a = 1 - Math.pow(1 - c_per_sec, FADE_SPEED * dt);
+    if (TRANSPARENT_FADE) {
+      fctx.save();
+      fctx.globalCompositeOperation = 'destination-out';
+      fctx.fillStyle = `rgba(0,0,0,${a})`;
+      fctx.fillRect(0,0,W,H);
+      fctx.restore();
+    } else {
+      fctx.fillStyle = `rgba(0,0,0,${a})`;
+      fctx.fillRect(0,0,W,H);
+    }
+    fadeAccum += a;
+    if (fadeAccum > 1.05) { fctx.clearRect(0,0,W,H); fadeAccum = 0; }
+
+    // Camera rotation & forward movement — ターゲット計算より先に行う(ジッタ修正)。
+    // 旧順序(ターゲット計算→カメラ更新)では、位置差分グラフの分母dtと位置に
+    // 反映済みのカメラ移動のdtが1フレームずれ、フレーム間隔が揺れる環境
+    // (スマホ実機等)で速度・加速度に×2/×0.5の見かけのジッタが出ていた。
+    // 操舵は前フレームのT(tgtPrev)を参照——16msの遅れ、操舵時定数~1.7sに対し無視可
+    if (tgtPrev) {
+      const {yawRate, pitchRate} = steerCameraToward(tgtPrev);
+      cam.yaw   += yawRate   * dt;
+      cam.pitch  = clamp(cam.pitch + pitchRate * dt, PITCH_MIN, PITCH_MAX);
+    }
+    if(running){
+      const {f} = camAxes();
+      cam.x += f.x * CAM_FWD_PX_S * dt;
+      cam.y += f.y * CAM_FWD_PX_S * dt;
+      cam.z += f.z * CAM_FWD_PX_S * dt;
+    }
+
+    // Target position
+    const centerX = W * 0.5, centerY = H * 0.45;
+    let rawX, rawY;
+    if (USE_CURSOR_AIM){
+      rawX = mouse.x; rawY = mouse.y;
+    }else{
+      rawX = centerX + aimOffset.ox;
+      rawY = centerY + aimOffset.oy;
+    }
+    const clampedX = Math.max(0, Math.min(W, rawX));
+    const clampedY = Math.max(0, Math.min(H, rawY));
+    // targetFromOffset は project() の逆変換なのでオフセット基準は投影中心
+    // (W/2, H/2)。centerX/centerY(0.45H)はタッチ操作のアンカーとしてのみ使う。
+    const offX = clampedX - W*0.5, offY = clampedY - H*0.5;
+    const T = targetFromOffset(offX, offY);
+
+    // 目標加速度の取得(APN増強項・グラフ共用)。座標の二階差分の生値を
+    // そのまま使う(EMA推定は廃止)。dt異常時(タブ復帰等)はリセット
+    if (tgtPrev && dt > 1e-4 && dt < 0.1) {
+      const vNow = mulv(sub(T, tgtPrev), 1/dt);
+      if (tgtVel) {
+        const aRaw = mulv(sub(vNow, tgtVel), 1/dt);
+        tgtAcc = aRaw;
+        // グラフ用に生値を記録(仮想空間のm/s²に換算)
+        if (SHOW_GRAPHS) {
+          accHist.push({t: now, a: len(aRaw) * WORLD_M_PER_PX});
+          while (accHist.length && now - accHist[0].t > ACC_GRAPH_WINDOW + 0.5) accHist.shift();
+        }
+      } else {
+        tgtAcc = {x:0,y:0,z:0};
+      }
+      // 速度グラフ用(仮想空間のm/sに換算)
+      if (SHOW_GRAPHS) {
+        spdHist.push({t: now, a: len(vNow) * WORLD_M_PER_PX});
+        while (spdHist.length && now - spdHist[0].t > ACC_GRAPH_WINDOW + 0.5) spdHist.shift();
+      }
+      tgtVel = vNow;
+    } else {
+      tgtVel = null; tgtAcc = {x:0,y:0,z:0};
+    }
+    tgtPrev = T;
+
+    // Target trail
+    lastTgt = pushTrail(tgtTrail, lastTgt, T, now, 0);
+    cleanTrail(tgtTrail, now);
+    drawTrailAdditiveLines(tgtTrail, now, palette.target.line, 1.0, 1.0);
+    drawTrailAdditivePoints(tgtTrail, now, a=>palette.target.core(a), 1.0);
+
+    // Target light point + flare (draw to fx)
+    const tp = project(T.x,T.y,T.z);
+    if(tp.s>0){
+      const scale = 1 + 1.2*tp.s;
+      drawStarGlow(fctx, tp.x, tp.y, scale, 1.0, palette.target, 0.37, now);
+      // ターゲット: グロー+ストリークは描く。ハローなし・ゴースト極薄
+      const flareIntensity = Math.min(1.0, 0.6 + 0.8*tp.s);
+      drawLensFlare(fctx, tp.x, tp.y, flareIntensity, now, palette.target.line, 0.35, true);
+    }
+
+    // Missile
+    for(let i=0;i<MISSILE_COUNT;i++){
+      if(!missiles[i]) missiles[i] = spawnMissile(i, 0);
+      const m = missiles[i];
+      const pal = palette.missile;  // PN/APNとも同色
+
+      // Waiting to respawn: draw fading trail only, skip physics
+      if(m.respawnAt){
+        cleanTrail(m.trail, now);
+        drawTrailAdditiveLines(m.trail, now, pal.line, 1.0, 1.0);
+        drawTrailAdditivePoints(m.trail, now, a=>pal.core(a), 1.0);
+        if(now >= m.respawnAt){
+          const next = spawnMissile(i, m.gen);
+          next.trail = m.trail;
+          missiles[i] = next;
+        }
+        continue;
+      }
+
+      // Proportional navigation
+      const rTM = sub(T,m.pos), u = norm(rTM);
+      if(!m.uPrev) m.uPrev = u;
+      const axis = cross(m.uPrev,u);
+      const sinTheta = clamp(len(axis), -1, 1);
+      const theta = Math.asin(sinTheta);
+      const w_los = Math.abs(theta)/Math.max(dt,1e-6);
+      if(m.apn){
+        // 増強比例航法(APN): a = N·Vm·ω_los + (N/2)·a_T⊥ を角速度ベクトル合成で実現。
+        // 横加速度aによる速度方向の回転は ω = (vdir×a)/Vm
+        const axisLen = len(axis);
+        let omega = (axisLen>1e-8) ? mulv(axis, PN_GAIN*w_los/axisLen) : {x:0,y:0,z:0};
+        const aPerp = sub(tgtAcc, mulv(u, dot(tgtAcc,u)));
+        let wAug = mulv(cross(m.vdir, aPerp), APN_AUG_GAIN/MISSILE_SPEED);
+        const wAugMag = len(wAug);
+        if(wAugMag > APN_AUG_CAP) wAug = mulv(wAug, APN_AUG_CAP/wAugMag);
+        omega = addv(omega, wAug);
+        const wMag = len(omega);
+        if(wMag>1e-8) m.vdir = norm( rotateAroundAxis(m.vdir, omega, Math.min(MAX_TURN_RATE, wMag)*dt) );
+        else{
+          const blend = Math.min(1, Math.min(MAX_TURN_RATE, PN_GAIN*w_los)*dt);
+          m.vdir = norm( addv( mulv(m.vdir,1-blend), mulv(u,blend) ) );
+        }
+      }else{
+        const turnRate = Math.min(MAX_TURN_RATE, PN_GAIN*w_los);
+        const turnAngle = turnRate*dt;
+        if(len(axis)>1e-8) m.vdir = norm( rotateAroundAxis(m.vdir, axis, turnAngle) );
+        else{
+          const blend = Math.min(1, turnRate*dt);
+          m.vdir = norm( addv( mulv(m.vdir,1-blend), mulv(u,blend) ) );
+        }
+      }
+      if(running) m.pos = addv(m.pos, mulv(m.vdir, MISSILE_SPEED*dt));
+
+      const dToT = len(rTM);
+      const cz   = camDepth(m.pos.x, m.pos.y, m.pos.z);
+      const dToCam = dist3(m.pos.x,m.pos.y,m.pos.z, cam.x,cam.y,cam.z);
+      const hit = (dToT < HIT_RADIUS);
+
+      // Trail
+      m.lastTrailPt = pushTrail(m.trail, m.lastTrailPt, m.pos, now, m.gen);
+      cleanTrail(m.trail, now);
+      drawTrailAdditiveLines(m.trail, now, pal.line, 1.0, 1.0);
+      drawTrailAdditivePoints(m.trail, now, a=>pal.core(a), 1.0);
+
+      // Light point (to fx)
+      const pp = project(m.pos.x, m.pos.y, m.pos.z);
+      if(pp.s>0){
+        const scale2 = 1 + 1.2*pp.s;
+        drawStarGlow(fctx, pp.x, pp.y, scale2, 1.0, pal, (m.seed||0.12), now);
+
+        // ミサイル: グロー+ストリークは描く(強度は太陽より弱い光源として半分)。
+        // ハローなし・ゴースト極薄
+        const flareI = Math.min(0.45, 0.22 + 0.35*pp.s);
+        drawLensFlare(fctx, pp.x, pp.y, flareI, now, pal.line, 0.35, true);
+      }
+
+      // Hit/behind/too far → set respawn delay, skip to next frame
+      if(hit || cz < -RESPAWN_BACK || dToCam > MAX_RANGE){
+        if(hit) spawnExplosion({x:m.pos.x,y:m.pos.y,z:m.pos.z}, now, 'missile');
+        m.respawnAt = now + Math.random();
+        m.gen = (m.gen||0) + 1;
+        continue;
+      }else{
+        m.uPrev = u;
+      }
+    }
+
+    // Explosion (Main) *Flare also drawn inside
+    drawExplosions(now);
+
+    // Overlay composition (additive)
+    const prev = ctx.globalCompositeOperation;
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.drawImage(fx, 0, 0, W, H);
+
+    // 太陽(360度背景の光源)のレンズフレア: カメラ接続中のみ、全合成の
+    // 最前面に毎フレーム描画(蓄積なし)。位置は背景の太陽と厳密一致。
+    if (showBackground) {
+      const sunP = projectSunDir();
+      if (sunP) {
+        drawLensFlare(ctx, sunP.x, sunP.y, 1.0, now, '255,236,190', 4);
+        // 中心整列ブースト: 太陽がレンズ中心に近づくとベーリンググレア
+        // (画面全体を包む柔らかい白み)が立ち上がる。実写で太陽を正面に
+        // 入れたときのコントラスト低下の再現。
+        const dc = Math.hypot(sunP.x - W*0.5, sunP.y - H*0.5);
+        const align = Math.max(0, 1 - dc / (Math.hypot(W, H) * 0.25));
+        if (align > 0) {
+          const va = 0.28 * align * align * (0.8 + 0.2*Math.sin(now*1.5));
+          const vr = Math.hypot(W, H) * 0.7;
+          const vg = ctx.createRadialGradient(sunP.x, sunP.y, 0, sunP.x, sunP.y, vr);
+          vg.addColorStop(0.0, `rgba(255,240,215,${va})`);
+          vg.addColorStop(0.5, `rgba(255,240,215,${va*0.45})`);
+          vg.addColorStop(1.0, 'rgba(255,240,215,0)');
+          ctx.fillStyle = vg; ctx.beginPath(); ctx.arc(sunP.x, sunP.y, vr, 0, Math.PI*2); ctx.fill();
+        }
+      }
+    }
+
+    ctx.globalCompositeOperation = prev;
+
+    // 接続中ピクトグラム(親キャプションの一部): screen 合成で背景に焼き込む。
+    // object-fit:contain 相当で同期されたボックスに収める。
+    if (capBadge.on && capBadge.alpha > 0.01 && capTinted) {
+      const bs = Math.min(capBadge.w / capTinted.width, capBadge.h / capTinted.height);
+      const bw = capTinted.width * bs, bh = capTinted.height * bs;
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      ctx.globalAlpha = capBadge.alpha;
+      ctx.drawImage(capTinted,
+        capBadge.x + (capBadge.w - bw) / 2, capBadge.y + (capBadge.h - bh) / 2, bw, bh);
+      ctx.restore();
+    }
+
+    // ターゲット速度・加速度グラフ(最前面・通常合成)
+    if (SHOW_GRAPHS) drawTgtGraphs(now);
+
+    dbgStat.raf++;
+    requestAnimationFrame(step);
+  }
+
+  // ===== Glitch Effect (Tile division & shift only) =====
+  function drawGlitchEffect(now) {
+    const elapsed = now - glitchStartTime;
+    const progress = elapsed / GLITCH_DURATION;
+
+    // ===== Tile Division Glitch Effect =====
+    const tileSize = 200; // 固定タイルサイズ（大きく）
+    const numTilesX = Math.ceil(W / tileSize);
+    const numTilesY = Math.ceil(H / tileSize);
+    const maxShift = 40; // Maximum shift amount
+
+    // Use cached transition target image
+    if (!glitchTargetCanvas) return; // Do nothing if no cache
+
+    // Increase number of tiles over time (start from min 1-2 tiles, up to max 15%)
+    const minTiles = 2;
+    const maxTileRatio = 0.15;
+    const maxTiles = Math.floor(numTilesX * numTilesY * maxTileRatio);
+    const numGlitchedTiles = Math.floor(minTiles + (maxTiles - minTiles) * progress);
+
+    for (let i = 0; i < numGlitchedTiles; i++) {
+      // Expand tile size according to progress (start: small → complete: screen size)
+      const sizeMultiplier = 1 + progress * 8; // 1x → 9x expansion
+
+      // Randomly select tile shape
+      const tileType = Math.random();
+      let baseW, baseH;
+
+      if (tileType < 0.2) {
+        // 20%: Very thin horizontal tile
+        baseW = Math.floor(400 + Math.random() * 600); // 400-1000px width
+        baseH = Math.floor(20 + Math.random() * 60);   // 20-80px height
+      } else if (tileType < 0.4) {
+        // 20%: Horizontal tile
+        baseW = Math.floor(250 + Math.random() * 350); // 250-600px width
+        baseH = Math.floor(60 + Math.random() * 120);  // 60-180px height
+      } else if (tileType < 0.6) {
+        // 20%: Near-square tile
+        const size = Math.floor(120 + Math.random() * 200); // 120-320px
+        baseW = size + Math.floor((Math.random() - 0.5) * 60);
+        baseH = size + Math.floor((Math.random() - 0.5) * 60);
+      } else if (tileType < 0.8) {
+        // 20%: Vertical tile
+        baseW = Math.floor(60 + Math.random() * 120);  // 60-180px width
+        baseH = Math.floor(200 + Math.random() * 300); // 200-500px height
+      } else {
+        // 20%: Small tile
+        baseW = Math.floor(50 + Math.random() * 150);  // 50-200px width
+        baseH = Math.floor(40 + Math.random() * 120);  // 40-160px height
+      }
+
+      // Expand size
+      const srcW = Math.min(W * 2, Math.floor(baseW * sizeMultiplier));
+      const srcH = Math.min(H * 2, Math.floor(baseH * sizeMultiplier));
+
+      // Random tile position
+      const srcX = Math.floor(Math.random() * Math.max(1, W - srcW));
+      const srcY = Math.floor(Math.random() * Math.max(1, H - srcH));
+
+      // Randomly shift image position within tile
+      const imageOffsetX = Math.floor((Math.random() - 0.5) * 100);
+      const imageOffsetY = Math.floor((Math.random() - 0.5) * 100);
+
+      // Clamp source coordinates within valid range
+      const clampedSrcX = Math.max(0, Math.min(W - srcW, srcX + imageOffsetX));
+      const clampedSrcY = Math.max(0, Math.min(H - srcH, srcY + imageOffsetY));
+
+      // Random shift
+      const shiftX = (Math.random() - 0.5) * maxShift;
+      const shiftY = (Math.random() - 0.5) * maxShift * 0.5;
+
+      const destX = srcX + shiftX;
+      const destY = srcY + shiftY;
+
+      // Randomly select effect type
+      const effectRandom = Math.random();
+      const applyCMY = effectRandom < 0.4; // 40%: CMY
+      const channelType = Math.floor(Math.random() * 3); // 0=Cyan, 1=Magenta, 2=Yellow
+
+      if (targetBackgroundState) {
+        // When turning background ON
+        if (applyCMY) {
+          // CMY color channel separation tile
+          ctx.save();
+          // Draw background image (using offset source coordinates)
+          ctx.drawImage(glitchTargetCanvas,
+            clampedSrcX, clampedSrcY, srcW, srcH,
+            destX, destY, srcW, srcH);
+
+          // Use multiply blend to keep only specific channel
+          ctx.globalCompositeOperation = 'multiply';
+          if (channelType === 0) {
+            // Cyan: Remove R channel (keep G and B)
+            ctx.fillStyle = 'rgb(0, 255, 255)';
+          } else if (channelType === 1) {
+            // Magenta: Remove G channel (keep R and B)
+            ctx.fillStyle = 'rgb(255, 0, 255)';
+          } else {
+            // Yellow: Remove B channel (keep R and G)
+            ctx.fillStyle = 'rgb(255, 255, 0)';
+          }
+          ctx.fillRect(destX, destY, srcW, srcH);
+          ctx.restore();
+        } else {
+          // Normal tile (60%)
+          ctx.drawImage(glitchTargetCanvas,
+            clampedSrcX, clampedSrcY, srcW, srcH,
+            destX, destY, srcW, srcH);
+        }
+      } else {
+        // When turning background OFF: Apply CMY effect then clear to transparent
+        if (applyCMY) {
+          // CMY color channel separation tile (from currently displayed image)
+          ctx.save();
+
+          // Copy current display content to temporary canvas
+          const tempCanvas = document.createElement('canvas');
+          tempCanvas.width = srcW;
+          tempCanvas.height = srcH;
+          const tempCtx = tempCanvas.getContext('2d');
+
+          // Get tile region from current canvas
+          tempCtx.drawImage(cv, clampedSrcX, clampedSrcY, srcW, srcH, 0, 0, srcW, srcH);
+
+          // Draw image with CMY effect applied
+          ctx.drawImage(tempCanvas, 0, 0, srcW, srcH, destX, destY, srcW, srcH);
+
+          // Use multiply blend to keep only specific channel
+          ctx.globalCompositeOperation = 'multiply';
+          if (channelType === 0) {
+            // Cyan: Remove R channel (keep G and B)
+            ctx.fillStyle = 'rgb(0, 255, 255)';
+          } else if (channelType === 1) {
+            // Magenta: Remove G channel (keep R and B)
+            ctx.fillStyle = 'rgb(255, 0, 255)';
+          } else {
+            // Yellow: Remove B channel (keep R and G)
+            ctx.fillStyle = 'rgb(255, 255, 0)';
+          }
+          ctx.fillRect(destX, destY, srcW, srcH);
+
+          // Clear to transparent with destination-out (gradually transparent while maintaining CMY effect)
+          ctx.globalCompositeOperation = 'destination-out';
+          ctx.fillStyle = `rgba(0, 0, 0, ${progress * 0.6})`; // Increase transparency according to progress
+          ctx.fillRect(destX, destY, srcW, srcH);
+
+          ctx.restore();
+        } else {
+          // Normal clear (60%): Gradually clear to transparent according to progress
+          ctx.save();
+          ctx.globalCompositeOperation = 'destination-out';
+          ctx.fillStyle = `rgba(0, 0, 0, ${progress * 0.8})`;
+          ctx.fillRect(destX, destY, srcW, srcH);
+          ctx.restore();
+        }
+      }
+    }
+  }
+
+  // ===== Text Drawing (Additive Blend) =====
+  function drawBrandText(now) {
+    // Text effects removed
+  }
+
+  // Initialize the simulation
+  requestAnimationFrame(step);
+  })();
+  </script>
+</body>
+</html>
