@@ -383,3 +383,10 @@ html.enh .enh-touch-layer {
      CSSレベルで妨げないため。捕捉時は JS の preventDefault で止める */
   background: transparent;
 }
+
+/* 演出モードでは #section-1 はステージ内の高さ確保マーカー(sticky より後に
+   描画される)のため、入場フェード用の黒ベール(::after)を出すとヒーローを
+   覆ってしまう。演出時のみ無効化する(noscript 版ではベールは有効) */
+html.enh #section-1::after {
+  display: none;
+}
