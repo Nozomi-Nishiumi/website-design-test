@@ -42,7 +42,7 @@
   }
   </script>
 
-  <link rel="stylesheet" href="styles_noscript.css?v=20260828a" type="text/css">
+  <link rel="stylesheet" href="styles_noscript.css?v=20260828b" type="text/css">
   <!-- 漸進強化: JSが無効ならこの2行は無害で、noscript版がそのまま表示される -->
   <link rel="stylesheet" href="enhance.css?v=20260827o" type="text/css">
   <script src="enhance.js?v=20260827a" defer></script>
@@ -493,6 +493,34 @@
 <footer>
   © 2026 NOZOMI NISHIUMI. All rights reserved. <br>Website designed and developed by Nozomi Nishiumi.<br>special thanks: F. H. Fahim
 </footer>
+
+<!-- bg-zoomブランチの暫定診断(?zoomdiag=1 のときだけ画面隅に実機の対応状況と
+     背景transformの実測値を表示する。マージ時には削除すること) -->
+<script>
+if (/[?&]zoomdiag=1/.test(location.search)) {
+  window.addEventListener('DOMContentLoaded', function () {
+    var d = document.createElement('div');
+    d.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:99999;' +
+      'background:rgba(0,0,0,0.85);color:#7fff7f;font:11px/1.6 Menlo,monospace;' +
+      'padding:8px 10px;border-radius:8px;pointer-events:none;white-space:pre;';
+    document.body.appendChild(d);
+    var sec = document.querySelector('#section-3');
+    (function tick() {
+      var cs = getComputedStyle(sec, '::after');
+      d.textContent =
+        'supports scroll(): ' + (window.CSS && CSS.supports ?
+          CSS.supports('animation-timeline: scroll()') : 'no CSS.supports') +
+        '\nsupports view-tl : ' + (window.CSS && CSS.supports ?
+          CSS.supports('view-timeline-name: --a') : '?') +
+        '\nanim: ' + cs.animationName + '  dur: ' + cs.animationDuration +
+        '\ntimeline: ' + (cs.animationTimeline || '(unreadable)') +
+        '\ns3 transform: ' + cs.transform +
+        '\nscrollY: ' + Math.round(window.scrollY);
+      requestAnimationFrame(tick);
+    })();
+  });
+}
+</script>
 
 </body>
 </html>

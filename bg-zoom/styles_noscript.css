@@ -892,9 +892,19 @@ section.parallax-section {
    - 非対応ブラウザは @supports ごと無視され現行の静止パララックスのまま */
 @supports (animation-timeline: scroll()) {
   @media (max-width: 768px), (pointer: coarse) {
+    /* v2: scroll(root)(ページ全体で1.08倍)は1セクション通過あたり約1.3%しか
+       変化せず知覚不能だった。各セクション自身のビューポート通過進行で
+       駆動する view-timeline に変更(1セクションごとに 1.0→1.08 を一巡)。
+       ::after は fixed で動かないため view() 直接は使えず、通常フローで
+       スクロールする親セクションに名前付きタイムラインを置いて参照する
+       (名前はそのセクションのサブツリー=自分の::afterにだけ見える) */
+    .parallax-section {
+      view-timeline-name: --secProgress;
+    }
     .parallax-section::after {
       animation: bgZoom linear forwards;
-      animation-timeline: scroll(root); /* 文書全体のスクロール進行で駆動 */
+      animation-duration: auto;  /* ショートハンドの初期値0sを進行連動用に明示上書き */
+      animation-timeline: --secProgress;
     }
   }
 }
