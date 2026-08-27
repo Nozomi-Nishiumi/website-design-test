@@ -510,6 +510,10 @@ if (/[?&]zoomdiag=1/.test(location.search)) {
       s.textContent = css;
       document.head.appendChild(s);
     }
+    if (/[?&]stripes=1/.test(location.search)) addCss(
+      '.img-section-02::after { background-image: repeating-linear-gradient(90deg, #030 0 40px, #6f6 40px 80px) !important; }' +
+      '.img-section-03::after { background-image: repeating-linear-gradient(90deg, #003 0 40px, #66f 40px 80px) !important; }' +
+      '.img-section-04::after { background-image: repeating-linear-gradient(90deg, #300 0 40px, #f66 40px 80px) !important; }');
     if (kills.indexOf('glass') >= 0) addCss(
       '* { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }');
     if (kills.indexOf('overlay') >= 0) addCss(
