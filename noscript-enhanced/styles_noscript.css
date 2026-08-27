@@ -815,11 +815,11 @@ section.parallax-section {
   left: 0;
   right: 0;
   bottom: 0; /* ← inset:0 より確実に高さを拾う */
-  background: rgba(0,0,0,0.7); /* ← ここで暗さ調整 */
+  background: rgba(0,0,0,0.58); /* ← ここで暗さ調整(すりガラス導入に伴い0.7→0.58へ明るく) */
   z-index: 1; /* ← 背景の上、テキストの下 */
 }
 /* section-5(ゼミ/ラボ教育)の暗幕(背景の暗さ調整用) */
-.parallax-section.img-section-05::before { background: rgba(0,0,0,0.62); }
+.parallax-section.img-section-05::before { background: rgba(0,0,0,0.50); }
 .parallax-section > * {
   position: relative;
   z-index: 2;
