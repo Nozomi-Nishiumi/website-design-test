@@ -340,6 +340,15 @@ html.enh .enh-cap-drone-layer {
 html.enh .enh-cap-drone--off {
   filter: invert(0.8);
 }
+/* スマホ: ピクトグラムを一回り小さく(75%)。スペーサーとレイヤーは常に同寸。
+   接続中のcanvas描画はスペーサー矩形に同期しているため自動で追従する */
+@media (max-width: 768px) {
+  html.enh .enh-cap-drone-space,
+  html.enh .enh-cap-drone-layer {
+    width: 102px;
+    height: 28px;
+  }
+}
 /* 接続中の黄金色+screen合成は missile.html が canvas 内で描く(DOM の
    mix-blend-mode は Safari で iframe 越しの背景に適用されないため) */
 html.enh .enh-cap-text {
