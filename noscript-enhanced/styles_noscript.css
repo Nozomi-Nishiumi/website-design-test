@@ -883,8 +883,11 @@ section.parallax-section {
 
 
 
+/* 入場演出: 内容そのもののopacityは動かさない(スクロール連動のopacityアニメは
+   要素を恒常的にbackdrop root化し、内側のすりガラスのbackdrop-filterが背景を
+   参照できなくなる——Chromiumで実測)。滑り上がり(transform)だけ内容に残し、
+   フェードは下の .parallax-section::after 黒ベールのフェードアウトで表現する */
 .fade-in {
-  opacity: 0;
   transform: translateY(20px);
   animation: fadeUp linear forwards;
   animation-timeline: view();
@@ -900,8 +903,38 @@ section.parallax-section {
 
 @keyframes fadeUp {
   to {
-    opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* 入場フェード用の黒ベール: セクション全面を覆い、スクロール連動でフェードアウト。
+   ベールは内容の祖先ではないので、すりガラスのbackdrop採取を妨げない。
+   スクロール連動アニメ非対応ブラウザでは duration 0 + forwards で即 opacity:0 になる */
+.parallax-section::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #000;
+  pointer-events: none;
+  z-index: 3; /* 内容(z-index:2)より上 */
+  opacity: 1;
+  animation: veilOut linear forwards;
+  animation-timeline: view();
+  animation-range: entry 20% cover 30%;
+}
+@keyframes veilOut {
+  to {
+    opacity: 0;
+  }
+}
+@media (max-width: 768px) {
+  /* スマホは .fade-in 同様に入場演出なし */
+  .parallax-section::after {
+    animation: none;
+    opacity: 0;
   }
 }
 
@@ -1353,12 +1386,13 @@ html:not(.enh) #top::after {
 .parallax-section .glass-panel,
 .parallax-section .projects-list,
 .parallax-section .contact-block {
-  /* ごく薄い白フィルでわずかに明るく+背景のディテールを均すぼかし。
+  /* ぼかし+固定値の明るさ持ち上げ。白半透明フィル(比例的: bg+α(255-bg))だと
+     暗い背景でほぼ見えないため、フィルタ連鎖 invert→brightness→invert→brightness
+     (切片+0.10・傾き1.0)で全画素に一律 +10%(≈+26/255) を加算する。
      トピック4枚は .topics-grid ごと、範囲指定の統合パネルは .glass-panel で
      1枚の連続パネルにする */
-  background: rgba(255, 255, 255, 0.05);
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px) invert(1) brightness(0.909) invert(1) brightness(1.1);
+  backdrop-filter: blur(6px) invert(1) brightness(0.909) invert(1) brightness(1.1);
   border-radius: 14px;
   padding: 18px 22px;
 }
