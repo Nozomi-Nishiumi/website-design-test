@@ -16,7 +16,7 @@
   'use strict';
 
   // デプロイごとに更新するバージョン(キャッシュバスティング/HUD表示用)
-  var ENH_VERSION = '20260828e';
+  var ENH_VERSION = '20260828f';
 
   // ハンバーガーメニュー: 項目をタップしたら閉じる(CSSのチェックボックスを外す)。
   // 演出の有無に関係なく効かせたいので、reduced-motion の早期 return より前に置く
@@ -364,6 +364,8 @@
   // 「サチり」が起きず、境界付近は速度ほぼゼロなのでかくつきも出ない
   var BGZ_MAX = 0.30;  // 入場時 1.30倍 → 等倍
   var BGZ_EASE = 2;    // 減速カーブの強さ(2=二次。大きいほど序盤急・終盤ゆるやか)
+  var BGZ_PAN = 0.4;   // 縦パン量 = ズーム余剰マージン((scale-1)*H/2)に対する割合。
+                       // 1未満なら画像端は構造的に露出せず、減衰もズームと同曲線
   // [第2段] PCも窓方式(styles_noscript.css)に統一したため全環境で駆動する
   var bgzSections = document.querySelectorAll('.parallax-section');
 
@@ -381,7 +383,9 @@
       if (r.bottom < 0 || r.top > vh) continue; // 画面外(窓に描画されない)は据え置き
       var bp = clamp01((vh - r.top) / (vh + r.height)); // ビューポート通過進行 0→1
       var s = 1 + BGZ_MAX * Math.pow(1 - bp, BGZ_EASE); // 1.30→1.0(イーズアウト)
+      var t = BGZ_PAN * (s - 1) * vh / 2;               // 下スクロールで背景が上へ流れる
       bgzSections[bi].style.setProperty('--bgz', s.toFixed(4));
+      bgzSections[bi].style.setProperty('--bgt', t.toFixed(1) + 'px');
     }
   }
 

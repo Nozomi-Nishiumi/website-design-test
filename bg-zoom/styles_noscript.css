@@ -875,7 +875,10 @@ section.parallax-section {
    JSなし(noscript)や reduced-motion では --bgz が書かれず既定値1=静止
    パララックスに安全劣化する */
 .parallax-section::after {
-  transform: scale(var(--bgz, 1));
+  /* --bgt はズーム余剰マージンの一部を使う縦パン(enhance.js が算出)。
+     translateY は scale 適用後の実ピクセル。余剰の100%未満に抑えて
+     端の露出を構造的に防ぐ */
+  transform: translateY(var(--bgt, 0px)) scale(var(--bgz, 1));
 }
 
 
