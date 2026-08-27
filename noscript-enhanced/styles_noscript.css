@@ -1357,11 +1357,11 @@ html:not(.enh) #top::after {
 .parallax-section .contact-block {
   /* ぼかし+固定値の明るさ持ち上げ。白半透明フィル(比例的: bg+α(255-bg))だと
      暗い背景でほぼ見えないため、フィルタ連鎖 invert→brightness→invert→brightness
-     (切片+0.05・傾き1.0)で全画素に一律 +5%(≈+13/255) を加算する。
+     (切片+0.025・傾き1.0)で全画素に一律 +2.5%(≈+6/255) を加算する。
      トピック4枚は .topics-grid ごと、範囲指定の統合パネルは .glass-panel で
      1枚の連続パネルにする */
-  -webkit-backdrop-filter: blur(6px) invert(1) brightness(0.9524) invert(1) brightness(1.05);
-  backdrop-filter: blur(6px) invert(1) brightness(0.9524) invert(1) brightness(1.05);
+  -webkit-backdrop-filter: blur(4px) invert(1) brightness(0.9756) invert(1) brightness(1.025);
+  backdrop-filter: blur(4px) invert(1) brightness(0.9756) invert(1) brightness(1.025);
   border-radius: 14px;
   padding: 18px 22px;
 }
