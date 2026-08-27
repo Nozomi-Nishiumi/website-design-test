@@ -868,14 +868,12 @@ section.parallax-section {
   html.enh #section-1::after {
     display: none;
   }
-/* v3: CSSスクロール連動タイムライン(named view-timeline→fixed疑似要素)は
-   「計算値(computed transform)は進むのに描画は静止」というエンジン依存の
-   サイレント故障を配信ページのピクセル計測で確認したため撤去。
-   駆動は enhance.js が担う: 各セクションの通過進行(0→1)をCSS変数 --bgz
-   (scale値 1.0→1.12)としてセクションに書き、ここでは静的 transform として
-   拾うだけにする。静的 transform の描画は全エンジンで実測確認済み。
-   JSなし(noscript)や reduced-motion では --bgz が書かれず既定値1=現行の
-   静止パララックスに安全劣化する */
+/* 背景ズーム(ズームアウト型): 各セクションの通過進行に応じて enhance.js が
+   CSS変数 --bgz(入場時 1.30 → 通過6割で 1.0)をセクションに書き、ここでは
+   静的 transform として拾うだけにする。CSSスクロール連動タイムラインを使わない
+   のは「計算値は進むのに描画は静止」というエンジン依存の故障を実測したため。
+   JSなし(noscript)や reduced-motion では --bgz が書かれず既定値1=静止
+   パララックスに安全劣化する */
 .parallax-section::after {
   transform: scale(var(--bgz, 1));
 }
