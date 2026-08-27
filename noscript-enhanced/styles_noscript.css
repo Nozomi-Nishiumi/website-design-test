@@ -1352,9 +1352,9 @@ html:not(.enh) #top::after {
 .parallax-section .topic-block,
 .parallax-section .projects-list,
 .parallax-section .contact-block {
-  background: rgba(15, 18, 24, 0.38);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
+  /* 暗色フィルなし: 明るさは変えず背景のディテールだけ均す純粋なぼかし */
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
   border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.09);
   padding: 18px 22px;
