@@ -16,7 +16,7 @@
   'use strict';
 
   // デプロイごとに更新するバージョン(キャッシュバスティング/HUD表示用)
-  var ENH_VERSION = '20260828d';
+  var ENH_VERSION = '20260828e';
 
   // ハンバーガーメニュー: 項目をタップしたら閉じる(CSSのチェックボックスを外す)。
   // 演出の有無に関係なく効かせたいので、reduced-motion の早期 return より前に置く
@@ -358,10 +358,12 @@
   // 書き込みは transform に帰着する変数のみ・タッチ介入なし(設計規約1,3準拠)
   // ズームアウト型(ユーザー指定 2026-08-28): セクション入場時に 1+BGZ_MAX 倍の
   // 寄った状態から始まり、スクロールダウンに伴って等倍へ引いていく
-  // (satoyama-terrace 的な「引きで見せる」リビール。変化率を上げるため振幅も増量)
+  // (satoyama-terrace 的な「引きで見せる」リビール)。
+  // 曲線はイーズアウト(1-p)^BGZ_EASE を通過全域にかける: 序盤は速く引き、
+  // 終盤へ漸近減速して出口で等倍。長いセクションでも途中で完全静止する
+  // 「サチり」が起きず、境界付近は速度ほぼゼロなのでかくつきも出ない
   var BGZ_MAX = 0.30;  // 入場時 1.30倍 → 等倍
-  var BGZ_RATE = 1.6;  // 進行の前倒し係数: 通過の約6割で等倍に到達し以降は静止
-                       // (境界通過時に両側が動かないのでかくつかない)
+  var BGZ_EASE = 2;    // 減速カーブの強さ(2=二次。大きいほど序盤急・終盤ゆるやか)
   // [第2段] PCも窓方式(styles_noscript.css)に統一したため全環境で駆動する
   var bgzSections = document.querySelectorAll('.parallax-section');
 
@@ -377,8 +379,9 @@
     for (bi = 0; bi < bgzSections.length; bi++) {
       var r = rects[bi];
       if (r.bottom < 0 || r.top > vh) continue; // 画面外(窓に描画されない)は据え置き
-      var bp = clamp01((vh - r.top) / (vh + r.height) * BGZ_RATE); // 通過進行 0→1(前倒し)
-      bgzSections[bi].style.setProperty('--bgz', (1 + BGZ_MAX * (1 - bp)).toFixed(4)); // 1.30→1.0
+      var bp = clamp01((vh - r.top) / (vh + r.height)); // ビューポート通過進行 0→1
+      var s = 1 + BGZ_MAX * Math.pow(1 - bp, BGZ_EASE); // 1.30→1.0(イーズアウト)
+      bgzSections[bi].style.setProperty('--bgz', s.toFixed(4));
     }
   }
 
