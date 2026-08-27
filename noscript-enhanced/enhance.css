@@ -288,7 +288,7 @@ html.enh .enh-s1-inner {
 html.enh .enh-missile-caption {
   position: absolute;
   z-index: 7;
-  right: 24px;
+  right: 12px; /* 右に詰める(旧24px)。ブロック内の中央揃え関係は維持 */
   bottom: 72px;
   /* 幅を固定: 状態行の文字数変化でブロック幅が変わると、中央揃えの基準が
      ずれてピクトグラムの位置が状態間で数px動いてしまうため */
@@ -297,6 +297,11 @@ html.enh .enh-missile-caption {
   white-space: nowrap;
   opacity: 0;
   pointer-events: none;
+}
+@media (max-width: 768px) {
+  html.enh .enh-missile-caption {
+    right: 4px; /* スマホはさらに右端へ */
+  }
 }
 html.enh .enh-cap-title {
   margin: 0 0 2px;
