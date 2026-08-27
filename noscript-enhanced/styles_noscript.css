@@ -766,15 +766,10 @@ section.parallax-section {
   background-repeat: no-repeat;
 }
 
-/* fixed背景は「マウス等の精密ポインタを持つ本物のPC」だけに適用する。
-   iPad(タッチ主体)は幅769px以上でもここに入れない: iPadOS Safariは
-   fixed背景のcoverを文書全体の高さ基準で計算するため、背景が
-   異常に拡大されるバグがある(::after方式で代替する) */
-@media (min-width: 769px) and (pointer: fine) {
-  section.parallax-section {
-    background-attachment: fixed;
-  }
-}
+/* [bg-zoom 第2段] PC の background-attachment: fixed は廃止し、全環境を
+   「clip窓 + fixedレイヤー(::after)」方式に統一した(下のブロック参照)。
+   fixed塗りは原理的に transform できず背景ズームを適用できないため。
+   窓方式はデスクトップChrome/WebKitで検証済み・iOSでは7月から本番稼働実績 */
 
 @media (max-width: 768px) {
   /* section.parallax-section(PC用 100px 50px)より詳細度を落とさないこと。
@@ -793,13 +788,8 @@ section.parallax-section {
 
 
 
-/* 各背景の画像 */
-.img-section-01 { background-image: url('images/pigeon.jpg');}
-.img-section-02 { background-image: url('images/experiment1.jpg');}
-.img-section-03 { background-image: url('images/snake_frog.jpg');}
-.img-section-04 { background-image: url('images/dive.jpg');}
-.img-section-05 { background-image: url('images/rugby_ops.jpg?v=20260715b');}
-.img-section-06 { background-image: url('images/programming.jpg?v=20260711a');}
+/* 各背景の画像はセクション本体ではなく固定レイヤー(::after)側で指定する
+   (窓方式への全環境統一に伴い、旧 .img-section-0X の背景指定は削除) */
 
 
 .parallax-section {
@@ -825,17 +815,17 @@ section.parallax-section {
   z-index: 2;
 }
 
-/* --- スマホ/タブレットでもパララックスを再現 ---
-   iOS/iPadOS Safari は background-attachment: fixed を正しく扱えないため、
+/* --- パララックス背景(全環境共通の「窓」方式) ---
    セクションを clip-path で「窓」にし、その中に position:fixed の
-   背景レイヤー(::after)を置いて同じ見た目を実現する。
-   タッチ主体の端末(pointer: coarse)は幅に関係なくこちらを使う(iPad対策)。
+   背景レイヤー(::after)を置いて固定背景を実現する。
+   元は iOS/iPadOS の background-attachment: fixed 非対応の回避策
+   (タッチ端末のみ)だったが、背景ズーム(--bgz)を全環境に適用するため
+   PC もこの方式に統一した(fixed塗りは transform 不可のため)。
    ::after(z:-1) → 暗幕::before(z:1) → 本文(z:2) の順に重なる */
-@media (max-width: 768px), (pointer: coarse) {
-  .parallax-section {
-    clip-path: inset(0); /* fixedレイヤーをセクション範囲に閉じ込める */
-    background-image: none; /* 背景は::after側に移す(下のurl指定を上書き) */
-  }
+.parallax-section {
+  clip-path: inset(0); /* fixedレイヤーをセクション範囲に閉じ込める */
+  background-image: none;
+}
 
   /* セクション境界の明るい線の対策(iPadで顕在化):
      clip-path の境界と暗幕(::before)の描画境界のサブピクセル丸めがずれると、
@@ -878,6 +868,17 @@ section.parallax-section {
   html.enh #section-1::after {
     display: none;
   }
+/* 背景ズーム(ズームアウト型): 各セクションの通過進行に応じて enhance.js が
+   CSS変数 --bgz(入場時 1.30 → 通過6割で 1.0)をセクションに書き、ここでは
+   静的 transform として拾うだけにする。CSSスクロール連動タイムラインを使わない
+   のは「計算値は進むのに描画は静止」というエンジン依存の故障を実測したため。
+   JSなし(noscript)や reduced-motion では --bgz が書かれず既定値1=静止
+   パララックスに安全劣化する */
+.parallax-section::after {
+  /* --bgt はズーム余剰マージンの一部を使う縦パン(enhance.js が算出)。
+     translateY は scale 適用後の実ピクセル。余剰の100%未満に抑えて
+     端の露出を構造的に防ぐ */
+  transform: translateY(var(--bgt, 0px)) scale(var(--bgz, 1));
 }
 
 

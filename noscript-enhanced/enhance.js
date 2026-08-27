@@ -16,7 +16,7 @@
   'use strict';
 
   // デプロイごとに更新するバージョン(キャッシュバスティング/HUD表示用)
-  var ENH_VERSION = '20260827a';
+  var ENH_VERSION = '20260828n';
 
   // ハンバーガーメニュー: 項目をタップしたら閉じる(CSSのチェックボックスを外す)。
   // 演出の有無に関係なく効かせたいので、reduced-motion の早期 return より前に置く
@@ -351,11 +351,68 @@
   var ticking = false;
   var lastScrolled = null;
 
+  // --- 背景ズーム(bg-zoomブランチ実験): スマホ系のみ ---
+  // styles_noscript.css の transform: scale(var(--bgz,1)) を駆動する。
+  // CSSタイムラインではなくJS駆動なのは、named view-timeline→fixed疑似要素が
+  // 「計算値は進むが描画されない」故障をエンジン依存で起こすため(実測)。
+  // 書き込みは transform に帰着する変数のみ・タッチ介入なし(設計規約1,3準拠)
+  // ズームアウト型(ユーザー指定 2026-08-28): セクション入場時に 1+BGZ_MAX 倍の
+  // 寄った状態から始まり、スクロールダウンに伴って等倍へ引いていく
+  // (satoyama-terrace 的な「引きで見せる」リビール)。
+  // 曲線はイーズアウト(1-p)^BGZ_EASE を通過全域にかける: 序盤は速く引き、
+  // 終盤へ漸近減速して出口で等倍。長いセクションでも途中で完全静止する
+  // 「サチり」が起きず、境界付近は速度ほぼゼロなのでかくつきも出ない
+  var BGZ_MAX = 0.30;  // 入場時 1.30倍 → 等倍(既定)
+  // セクション個別の初期ズーム(ユーザー指定 2026-08-28: 長いセクション2だけ
+  // 前のめり配分を厚くするため増量。他は既定のまま)
+  var BGZ_MAX_BY_ID = { 'section-2': 0.45 };
+  var BGZ_EASE = 2;    // 減速カーブの強さ(2=二次。大きいほど序盤急・終盤ゆるやか)
+  var BGZ_EASEREF = 2.5; // 減速カーブをフル適用する通過距離の上限(ビューポート高の
+                         // 倍数)。これより長いセクションは指数を1(線形)へ近づけ、
+                         // 後半でもズーム変化が感じられるようにする(ユーザー案
+                         // 2026-08-28: 漸近減速のゲインをセクション長に応じさせる)
+  var BGZ_PAN = 0.4;   // 入場側パン = ズーム余剰マージン((scale-1)*H/2)に対する割合。
+                       // 1未満なら画像端は構造的に露出せず、減衰もズームと同曲線
+  var BGZ_PEEL = 0.2;  // 退場側パン(捲れ): セクションの窓が上へ畳まれる間、背景を
+                       // スクロールの20%の速度で上へ追従させる(satoyama-terrace実測
+                       // 15-20%に合わせた)。退場中は窓が上部に寄りレイヤー下端まで
+                       // 余裕があるため、等倍でも端は露出しない
+  // [第2段] PCも窓方式(styles_noscript.css)に統一したため全環境で駆動する
+  var bgzSections = document.querySelectorAll('.parallax-section');
+
+  function renderBgZoom() {
+    var vh = window.innerHeight;
+    var rects = [];
+    var bi;
+    // 読み(getBoundingClientRect)と書き(setProperty)を分離してレイアウト
+    // スラッシングを避ける
+    for (bi = 0; bi < bgzSections.length; bi++) {
+      rects.push(bgzSections[bi].getBoundingClientRect());
+    }
+    for (bi = 0; bi < bgzSections.length; bi++) {
+      var r = rects[bi];
+      if (r.bottom < 0 || r.top > vh) continue; // 画面外(窓に描画されない)は据え置き
+      var total = vh + r.height;
+      var bp = clamp01((vh - r.top) / total);           // ビューポート通過進行 0→1
+      // 長いセクションほど線形(指数1)に近づける: 短い=2次の勢い、長い=後半も変化維持
+      var ease = 1 + (BGZ_EASE - 1) * Math.min(1, BGZ_EASEREF * vh / total);
+      var maxZ = BGZ_MAX_BY_ID[bgzSections[bi].id] || BGZ_MAX;
+      var s = 1 + maxZ * Math.pow(1 - bp, ease);        // 1+maxZ→1.0(イーズアウト)
+      var tIn = BGZ_PAN * (s - 1) * vh / 2;             // 入場側: 沈み位置から定位置へ
+      var pex = clamp01(1 - r.bottom / vh);             // 退場進行(窓下端が上がるほど1へ)
+      var tEx = BGZ_PEEL * vh * pex;                    // 退場側: 境界と一緒に上へ(捲れ)
+      bgzSections[bi].style.setProperty('--bgz', s.toFixed(4));
+      bgzSections[bi].style.setProperty('--bgt', (tIn - tEx).toFixed(1) + 'px');
+    }
+  }
+
   function render(force) {
     ticking = false;
     var scrolled = -stage.getBoundingClientRect().top;
     if (!force && scrolled === lastScrolled) return;
     lastScrolled = scrolled;
+
+    renderBgZoom();
 
     var pHero = clamp01(scrolled / geo.heroRange);
     var pS1 = clamp01((scrolled - geo.heroRange) / geo.s1Range);
