@@ -16,7 +16,7 @@
   'use strict';
 
   // デプロイごとに更新するバージョン(キャッシュバスティング/HUD表示用)
-  var ENH_VERSION = '20260828a';
+  var ENH_VERSION = '20260828b';
 
   // ハンバーガーメニュー: 項目をタップしたら閉じる(CSSのチェックボックスを外す)。
   // 演出の有無に関係なく効かせたいので、reduced-motion の早期 return より前に置く
@@ -356,7 +356,9 @@
   // CSSタイムラインではなくJS駆動なのは、named view-timeline→fixed疑似要素が
   // 「計算値は進むが描画されない」故障をエンジン依存で起こすため(実測)。
   // 書き込みは transform に帰着する変数のみ・タッチ介入なし(設計規約1,3準拠)
-  var BGZ_MAX = 0.12; // 通過完了時に 1.0+0.12 = 1.12倍(1.08では知覚しづらかったため増量)
+  var BGZ_MAX = 0.12;  // 最大 1.12倍(1.08では知覚しづらかったため増量)
+  var BGZ_RATE = 1.6;  // 進行の前倒し係数: 通過の約6割で最大到達(1画面あたりの
+                       // 変化率を上げて知覚しやすくする。以降は1.12で保持)
   var bgzSections = (window.matchMedia('(max-width: 768px)').matches ||
                      window.matchMedia('(pointer: coarse)').matches)
     ? document.querySelectorAll('.parallax-section') : [];
@@ -373,7 +375,7 @@
     for (bi = 0; bi < bgzSections.length; bi++) {
       var r = rects[bi];
       if (r.bottom < 0 || r.top > vh) continue; // 画面外(窓に描画されない)は据え置き
-      var bp = clamp01((vh - r.top) / (vh + r.height)); // ビューポート通過進行 0→1
+      var bp = clamp01((vh - r.top) / (vh + r.height) * BGZ_RATE); // 通過進行 0→1(前倒し)
       bgzSections[bi].style.setProperty('--bgz', (1 + BGZ_MAX * bp).toFixed(4));
     }
   }
