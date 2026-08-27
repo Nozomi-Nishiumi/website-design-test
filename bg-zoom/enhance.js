@@ -16,7 +16,7 @@
   'use strict';
 
   // デプロイごとに更新するバージョン(キャッシュバスティング/HUD表示用)
-  var ENH_VERSION = '20260828k';
+  var ENH_VERSION = '20260828l';
 
   // ハンバーガーメニュー: 項目をタップしたら閉じる(CSSのチェックボックスを外す)。
   // 演出の有無に関係なく効かせたいので、reduced-motion の早期 return より前に置く
@@ -364,6 +364,10 @@
   // 「サチり」が起きず、境界付近は速度ほぼゼロなのでかくつきも出ない
   var BGZ_MAX = 0.30;  // 入場時 1.30倍 → 等倍
   var BGZ_EASE = 2;    // 減速カーブの強さ(2=二次。大きいほど序盤急・終盤ゆるやか)
+  var BGZ_EASEREF = 2.5; // 減速カーブをフル適用する通過距離の上限(ビューポート高の
+                         // 倍数)。これより長いセクションは指数を1(線形)へ近づけ、
+                         // 後半でもズーム変化が感じられるようにする(ユーザー案
+                         // 2026-08-28: 漸近減速のゲインをセクション長に応じさせる)
   var BGZ_PAN = 0.4;   // 入場側パン = ズーム余剰マージン((scale-1)*H/2)に対する割合。
                        // 1未満なら画像端は構造的に露出せず、減衰もズームと同曲線
   var BGZ_PEEL = 0.2;  // 退場側パン(捲れ): セクションの窓が上へ畳まれる間、背景を
@@ -385,8 +389,11 @@
     for (bi = 0; bi < bgzSections.length; bi++) {
       var r = rects[bi];
       if (r.bottom < 0 || r.top > vh) continue; // 画面外(窓に描画されない)は据え置き
-      var bp = clamp01((vh - r.top) / (vh + r.height)); // ビューポート通過進行 0→1
-      var s = 1 + BGZ_MAX * Math.pow(1 - bp, BGZ_EASE); // 1.30→1.0(イーズアウト)
+      var total = vh + r.height;
+      var bp = clamp01((vh - r.top) / total);           // ビューポート通過進行 0→1
+      // 長いセクションほど線形(指数1)に近づける: 短い=2次の勢い、長い=後半も変化維持
+      var ease = 1 + (BGZ_EASE - 1) * Math.min(1, BGZ_EASEREF * vh / total);
+      var s = 1 + BGZ_MAX * Math.pow(1 - bp, ease);     // 1.30→1.0(イーズアウト)
       var tIn = BGZ_PAN * (s - 1) * vh / 2;             // 入場側: 沈み位置から定位置へ
       var pex = clamp01(1 - r.bottom / vh);             // 退場進行(窓下端が上がるほど1へ)
       var tEx = BGZ_PEEL * vh * pex;                    // 退場側: 境界と一緒に上へ(捲れ)
