@@ -1356,7 +1356,6 @@ html:not(.enh) #top::after {
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
   border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
   padding: 18px 22px;
 }
 /* ガラス内ガラスの打ち消し(入れ子だと二重ぼかし=濁り+無駄な負荷) */
