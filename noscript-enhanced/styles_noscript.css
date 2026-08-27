@@ -1365,11 +1365,12 @@ html:not(.enh) #top::after {
   border-radius: 14px;
   padding: 18px 22px;
 }
-/* セクション2のみぼかし弱め(2px)。明るさ加算(+9/255)は共通 */
-#section-2 .topics-grid,
+/* セクション2のみぼかし弱め(3px)。明るさ加算(+9/255)は共通。
+   注: ID詳細度が入れ子打ち消しルールに勝つため、入れ子になりうる
+   .topics-grid はここに含めない(パネルは .glass-panel が担う) */
 #section-2 .glass-panel {
-  -webkit-backdrop-filter: blur(2px) invert(1) brightness(0.9659) invert(1) brightness(1.0353);
-  backdrop-filter: blur(2px) invert(1) brightness(0.9659) invert(1) brightness(1.0353);
+  -webkit-backdrop-filter: blur(3px) invert(1) brightness(0.9659) invert(1) brightness(1.0353);
+  backdrop-filter: blur(3px) invert(1) brightness(0.9659) invert(1) brightness(1.0353);
 }
 /* ガラス内ガラスの打ち消し(入れ子だと二重ぼかし=濁り+無駄な負荷) */
 .parallax-section :is(.text-block, .topics-grid, .glass-panel, .topic-block, .projects-list, .contact-block)
