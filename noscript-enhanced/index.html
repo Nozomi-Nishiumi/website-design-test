@@ -42,6 +42,23 @@
   }
   </script>
 
+  <!-- アクセス解析 (Google Analytics 4)。本番サイト(laboratory)で開かれた時だけ
+       タグを読み込む: テストサイト・ローカル開発のアクセスは計測に混ざらない。
+       ファイル自体はテスト/本番で同一のまま運用できる -->
+  <script>
+  if (location.hostname === 'nozomi-nishiumi.github.io' &&
+      location.pathname.indexOf('/laboratory/') === 0) {
+    var gaEl = document.createElement('script');
+    gaEl.async = true;
+    gaEl.src = 'https://www.googletagmanager.com/gtag/js?id=G-E2BGEZ777P';
+    document.head.appendChild(gaEl);
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){ dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-E2BGEZ777P');
+  }
+  </script>
+
   <link rel="stylesheet" href="styles_noscript.css?v=20260828f" type="text/css">
   <!-- 漸進強化: JSが無効ならこの2行は無害で、noscript版がそのまま表示される -->
   <link rel="stylesheet" href="enhance.css?v=20260827o" type="text/css">
