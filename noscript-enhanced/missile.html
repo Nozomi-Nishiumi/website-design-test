@@ -45,10 +45,9 @@
   // near(手前の描画限界): 視点(カメラ位置の FOV 単位後ろ)の直前まで下げる。
   // 投影は s=FOV/(FOV+cz) で cz=-FOV で発散するため、2% 手前で止める(拡大率の上限は50倍)
   const Z_NEAR = -0.98 * FOV;
-  // 視点の近くでは拡大率 s が大きくなる。光のにじみ等の「大きさ」に使う s はここで頭打ちにする。
-  // 比較用: ?viscap=0 の時は上限なし(光のにじみも軌跡の点も、拡大率どおりの大きさで描く)
-  const NO_VIS_CAP = /[?&]viscap=0/.test(location.search);
-  const S_VIS_MAX = NO_VIS_CAP ? Infinity : 3;
+  // 光のにじみ等の「大きさ」に使う拡大率 s の上限。上限なし(拡大率どおりの大きさ)を
+  // 採用(ユーザー判断 2026-11-26、上限3との見比べの結果)。頭打ちにしたくなったらここを数値にする
+  const S_VIS_MAX = Infinity;
   const AIM_GAIN = 1.8;
   const DPR = Math.min(1.2, devicePixelRatio||1);
 
@@ -628,7 +627,8 @@
   // 軌跡の点の半径: 視点からの奥行き(FOV+cz)に反比例させる。これは投影の拡大率 s に
   // 比例するのと同じで、点の大きさと画面上の位置が同じ透視で決まる(手前ほど必ず大きい)。
   // 旧式はカメラ位置からの距離基準で、カメラ位置付近が大きく、視点の近くで逆に小さくなっていた
-  const TRAIL_SIZE_MAX = NO_VIS_CAP ? Infinity : SIZE_MAX;
+  // 軌跡の点の半径の上限。上記と同じく上限なしを採用(旧来の上限は SIZE_MAX=14px)
+  const TRAIL_SIZE_MAX = Infinity;
   // 線分の両端の太さの比がこれを超えたら台形で描く(遠くの線分は今までどおりの線)
   const TRAIL_TAPER_RATIO = 1.5;
   function trailRadius(pr, sizeMul){
