@@ -42,7 +42,11 @@
   const TARGET_DIST  = 1200 * 9;
   const MISSILE_SPEED = CAM_FWD_PX_S * 3;
   const MAX_RANGE = TARGET_DIST * 5;
-  const Z_NEAR = 0.01;
+  // near(手前の描画限界): 視点(カメラ位置の FOV 単位後ろ)の直前まで下げる。
+  // 投影は s=FOV/(FOV+cz) で cz=-FOV で発散するため、2% 手前で止める(拡大率の上限は50倍)
+  const Z_NEAR = -0.98 * FOV;
+  // 視点の近くでは拡大率 s が大きくなる。光のにじみ等の「大きさ」に使う s はここで頭打ちにする
+  const S_VIS_MAX = 3;
   const AIM_GAIN = 1.8;
   const DPR = Math.min(1.2, devicePixelRatio||1);
 
@@ -69,7 +73,12 @@
   // (レース用FPVドローン級)と置いて世界座標単位→メートルを定義。
   // 含意: ターゲット距離≈104m、ミサイル速度≈120m/s
   const WORLD_M_PER_PX = 40 / CAM_FWD_PX_S;
-  const HIT_RADIUS = 300, RESPAWN_BACK = 200;
+  // ミサイルの出発点: カメラ位置から一律 SPAWN_BACK 後ろ(どの端末の視点よりも後ろ。
+  // 視点は最も後ろの4Kでも867単位後ろ)。中心軸から SPAWN_RADIUS 離し、near を越える
+  // 瞬間を画面の外にする(何もない所から突然現れて見えないように)。端末によらず同じ軌道
+  const SPAWN_BACK = 1000, SPAWN_RADIUS = 40;
+  // 出発点よりさらに後ろへ抜けたら再出現(出発直後に誤って再出現しない余裕を持たせる)
+  const HIT_RADIUS = 300, RESPAWN_BACK = SPAWN_BACK + 200;
 
   // Color - Additive blending colors optimized for background brightness
   const palette = {
@@ -610,9 +619,17 @@
       const p=arr[i];
       const alpha = Math.max(ALPHA_MIN, ALPHA_MAX*Math.pow(0.5,(tsec-p.t)/FADE_HALFLIFE_S));
       const cz = camDepth(p.x,p.y,p.z);
-      if(cz <= 0 || alpha<ALPHA_CUTOFF) arr.splice(i,1);
+      if(cz <= Z_NEAR || alpha<ALPHA_CUTOFF) arr.splice(i,1);
       else i++;
     }
+  }
+  // 軌跡の点の大きさを決める距離。カメラ位置より前(cz>=0)は従来どおりカメラ位置からの距離。
+  // カメラ位置より手前(cz<0)は中心軸からの距離にする。従来式だと視点に近づくほど点が
+  // 小さくなる逆転が起きるため。cz=0 で両者は一致するので大きさは連続
+  function trailSizeDist(P, cz){
+    const dd = dist3(P.x,P.y,P.z, cam.x,cam.y,cam.z);
+    const d = cz < 0 ? Math.sqrt(Math.max(0, dd*dd - cz*cz)) : dd;
+    return Math.max(1, d);
   }
   function drawTrailAdditivePoints(arr, tsec, colorFn, sizeMul=1){
     if(arr.length===0) return;
@@ -621,7 +638,7 @@
     for(const P of arr){
       const pr = project(P.x,P.y,P.z);
       if(pr.s<=0) continue;
-      const d = Math.max(1, dist3(P.x,P.y,P.z, cam.x,cam.y,cam.z));
+      const d = trailSizeDist(P, pr.z);
       let r = (SIZE_K / d) * sizeMul;
       r = Math.max(SIZE_MIN, Math.min(SIZE_MAX, r));
       const a = Math.max(ALPHA_MIN, ALPHA_MAX*Math.pow(0.5,(tsec-P.t)/FADE_HALFLIFE_S));
@@ -637,15 +654,24 @@
     for(let i=1;i<arr.length;i++){
       const A=arr[i-1], B=arr[i];
       if(A.gen!==undefined && B.gen!==undefined && A.gen!==B.gen) continue;
-      const pa=project(A.x,A.y,A.z), pb=project(B.x,B.y,B.z);
-      if(pa.s<=0 || pb.s<=0) continue;
-      const da=Math.max(1, dist3(A.x,A.y,A.z, cam.x,cam.y,cam.z));
-      const db=Math.max(1, dist3(B.x,B.y,B.z, cam.x,cam.y,cam.z));
+      let pa=project(A.x,A.y,A.z), pb=project(B.x,B.y,B.z);
+      if(pa.s<=0 && pb.s<=0) continue;
+      let A2=A, B2=B;
+      if(pa.s<=0 || pb.s<=0){
+        // near をまたぐ線は丸ごと捨てず、near の位置で切り取って描く(線が急に消えないように)
+        const k = (Z_NEAR + 0.5 - pa.z) / (pb.z - pa.z);
+        const C = {x:A.x+(B.x-A.x)*k, y:A.y+(B.y-A.y)*k, z:A.z+(B.z-A.z)*k, t:A.t+(B.t-A.t)*k};
+        const pc = project(C.x,C.y,C.z);
+        if(pc.s<=0) continue;
+        if(pa.s<=0){ A2=C; pa=pc; } else { B2=C; pb=pc; }
+      }
+      const da=trailSizeDist(A2, pa.z);
+      const db=trailSizeDist(B2, pb.z);
       const rA = Math.max(SIZE_MIN, Math.min(SIZE_MAX, (SIZE_K/da)*sizeMul));
       const rB = Math.max(SIZE_MIN, Math.min(SIZE_MAX, (SIZE_K/db)*sizeMul));
       const w = (rA + rB) * 0.5 * 0.9 * lineScale;
-      const aA = Math.max(ALPHA_MIN, ALPHA_MAX*Math.pow(0.5,(tsec-A.t)/FADE_HALFLIFE_S));
-      const aB = Math.max(ALPHA_MIN, ALPHA_MAX*Math.pow(0.5,(tsec-B.t)/FADE_HALFLIFE_S));
+      const aA = Math.max(ALPHA_MIN, ALPHA_MAX*Math.pow(0.5,(tsec-A2.t)/FADE_HALFLIFE_S));
+      const aB = Math.max(ALPHA_MIN, ALPHA_MAX*Math.pow(0.5,(tsec-B2.t)/FADE_HALFLIFE_S));
       const alpha = (aA + aB) * 0.6;
       ctx.lineWidth = w;
       ctx.strokeStyle = `rgba(${baseRGBA},${alpha})`;
@@ -848,15 +874,18 @@
   // ===== Missile =====
   const missiles = [];
   function spawnMissile(i, gen=0){
-    const lateral = (i-1.5)*12 + (Math.random()-0.5)*6;
     const {r,u,f} = camAxes();
-    const pos = addv({x:cam.x,y:cam.y,z:cam.z},
-                     addv( mulv(r, lateral*0.6), mulv(u, lateral*0.2) ));
     let vdir = {x:f.x, y:f.y, z:f.z};
     const yaw   = (i-1.5) * 0.05 + (Math.random()-0.5)*0.05;
     const pitch = ((i%2===0 ? -1 : 1) * 0.025) + (Math.random()-0.5)*0.04;
     vdir = rotateAroundAxis(vdir, u, yaw);
     vdir = rotateAroundAxis(vdir, r, pitch);
+    // 出発点はカメラ位置の SPAWN_BACK 後ろ。中心軸から離す向きを進行方向の横成分と
+    // 同じにすると、前進するほど軸から離れていくので、near を越える瞬間は必ず
+    // SPAWN_RADIUS 以上離れている(=画面の外)。横成分がほぼ無い時は左右に振り分ける
+    let side = sub(vdir, mulv(f, dot(vdir, f)));
+    side = (len(side) > 1e-4) ? norm(side) : mulv(r, i < 2 ? -1 : 1);
+    const pos = addv( addv({x:cam.x,y:cam.y,z:cam.z}, mulv(f, -SPAWN_BACK)), mulv(side, SPAWN_RADIUS) );
     // i=1,3 は増強比例航法(APN)機。lateral配置で左右に1発ずつPN/APNが混在する
     return {pos, vdir: norm(vdir), uPrev:null, trail:[], lastTrailPt:null, seed: Math.random()*1000, gen, apn: (i%2===1)};
   }
@@ -878,7 +907,8 @@
     for(let i=0;i<expl.length;i++){
       const e = expl[i], p = project(e.x,e.y,e.z);
       if(p.s<=0) continue;
-      const t = now - e.t0, scale = 1 + 1.2*p.s;
+      const sv = Math.min(p.s, S_VIS_MAX);
+      const t = now - e.t0, scale = 1 + 1.2*sv;
       const {coreR, glowR} = explosionRadii(scale);
       const cset = palette[e.type] || palette.target;
       const coreAlive = t < EXP_CORE_LIFE;
@@ -895,7 +925,7 @@
 
         // 爆発コアに同色フレア（fx）
         const flareRGB = cset.line;
-        drawLensFlare(fctx, p.x, p.y, Math.min(1.0, 0.9*u*(0.8+0.8*p.s)), now, flareRGB, 1, true);
+        drawLensFlare(fctx, p.x, p.y, Math.min(1.0, 0.9*u*(0.8+0.8*sv)), now, flareRGB, 1, true);
       }
       if(glowAlive){
         const u = 1 - (t/EXP_GLOW_LIFE);
@@ -906,7 +936,7 @@
         ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x,p.y, r,0,Math.PI*2); ctx.fill();
 
         const flareRGB = cset.line;
-        drawLensFlare(fctx, p.x, p.y, 0.45*u*(0.8+0.6*p.s), now, flareRGB, 1, true);
+        drawLensFlare(fctx, p.x, p.y, 0.45*u*(0.8+0.6*sv), now, flareRGB, 1, true);
       }
     }
     for(let i=0;i<expl.length;){ if(now - expl[i].t0 > EXP_GLOW_LIFE) expl.splice(i,1); else i++; }
@@ -1123,10 +1153,10 @@
     // Target light point + flare (draw to fx)
     const tp = project(T.x,T.y,T.z);
     if(tp.s>0){
-      const scale = 1 + 1.2*tp.s;
+      const scale = 1 + 1.2*Math.min(tp.s, S_VIS_MAX);
       drawStarGlow(fctx, tp.x, tp.y, scale, 1.0, palette.target, 0.37, now);
       // ターゲット: グロー+ストリークは描く。ハローなし・ゴースト極薄
-      const flareIntensity = Math.min(1.0, 0.6 + 0.8*tp.s);
+      const flareIntensity = Math.min(1.0, 0.6 + 0.8*Math.min(tp.s, S_VIS_MAX));
       drawLensFlare(fctx, tp.x, tp.y, flareIntensity, now, palette.target.line, 0.35, true);
     }
 
@@ -1197,12 +1227,12 @@
       // Light point (to fx)
       const pp = project(m.pos.x, m.pos.y, m.pos.z);
       if(pp.s>0){
-        const scale2 = 1 + 1.2*pp.s;
+        const scale2 = 1 + 1.2*Math.min(pp.s, S_VIS_MAX);
         drawStarGlow(fctx, pp.x, pp.y, scale2, 1.0, pal, (m.seed||0.12), now);
 
         // ミサイル: グロー+ストリークは描く(強度は太陽より弱い光源として半分)。
         // ハローなし・ゴースト極薄
-        const flareI = Math.min(0.45, 0.22 + 0.35*pp.s);
+        const flareI = Math.min(0.45, 0.22 + 0.35*Math.min(pp.s, S_VIS_MAX));
         drawLensFlare(fctx, pp.x, pp.y, flareI, now, pal.line, 0.35, true);
       }
 
