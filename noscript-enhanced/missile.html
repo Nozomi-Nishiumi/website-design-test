@@ -629,6 +629,8 @@
   // 比例するのと同じで、点の大きさと画面上の位置が同じ透視で決まる(手前ほど必ず大きい)。
   // 旧式はカメラ位置からの距離基準で、カメラ位置付近が大きく、視点の近くで逆に小さくなっていた
   const TRAIL_SIZE_MAX = NO_VIS_CAP ? Infinity : SIZE_MAX;
+  // 線分の両端の太さの比がこれを超えたら台形で描く(遠くの線分は今までどおりの線)
+  const TRAIL_TAPER_RATIO = 1.5;
   function trailRadius(pr, sizeMul){
     const r = (SIZE_K * pr.s / FOV) * sizeMul;
     return Math.max(SIZE_MIN, Math.min(TRAIL_SIZE_MAX, r));
@@ -666,13 +668,30 @@
         if(pa.s<=0){ A2=C; pa=pc; } else { B2=C; pb=pc; }
       }
       const rA = trailRadius(pa, sizeMul), rB = trailRadius(pb, sizeMul);
-      const w = (rA + rB) * 0.5 * 0.9 * lineScale;
+      const wA = rA * 0.9 * lineScale, wB = rB * 0.9 * lineScale;
       const aA = Math.max(ALPHA_MIN, ALPHA_MAX*Math.pow(0.5,(tsec-A2.t)/FADE_HALFLIFE_S));
       const aB = Math.max(ALPHA_MIN, ALPHA_MAX*Math.pow(0.5,(tsec-B2.t)/FADE_HALFLIFE_S));
       const alpha = (aA + aB) * 0.6;
-      ctx.lineWidth = w;
-      ctx.strokeStyle = `rgba(${baseRGBA},${alpha})`;
-      ctx.beginPath(); ctx.moveTo(pa.x,pa.y); ctx.lineTo(pb.x,pb.y); ctx.stroke();
+      const col = `rgba(${baseRGBA},${alpha})`;
+      const sx = pb.x - pa.x, sy = pb.y - pa.y, sl = Math.hypot(sx, sy);
+      if(Math.max(wA, wB) > TRAIL_TAPER_RATIO * Math.min(wA, wB) && sl > 1e-3){
+        // 手前と奥で太さが大きく違う線分(視点の近く)は、奥に向かって細くなる台形で描く。
+        // 一様な太さで引くと両端の平均の太さの帯になり、前後の線より変に太く見えるため。
+        // 太さは奥行きの逆数に比例し、透視では奥行きの逆数が画面上の位置に対して一次式で
+        // 変わるので、両端の太さを直線で結ぶ台形がそのまま透視どおりの形になる
+        const nx = -sy / sl, ny = sx / sl, hA = wA * 0.5, hB = wB * 0.5;
+        ctx.fillStyle = col;
+        ctx.beginPath();
+        ctx.moveTo(pa.x + nx*hA, pa.y + ny*hA);
+        ctx.lineTo(pb.x + nx*hB, pb.y + ny*hB);
+        ctx.lineTo(pb.x - nx*hB, pb.y - ny*hB);
+        ctx.lineTo(pa.x - nx*hA, pa.y - ny*hA);
+        ctx.closePath(); ctx.fill();
+      }else{
+        ctx.lineWidth = (wA + wB) * 0.5;
+        ctx.strokeStyle = col;
+        ctx.beginPath(); ctx.moveTo(pa.x,pa.y); ctx.lineTo(pb.x,pb.y); ctx.stroke();
+      }
     }
     ctx.globalCompositeOperation = prevComp;
   }
