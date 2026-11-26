@@ -46,8 +46,9 @@
   // 投影は s=FOV/(FOV+cz) で cz=-FOV で発散するため、2% 手前で止める(拡大率の上限は50倍)
   const Z_NEAR = -0.98 * FOV;
   // 視点の近くでは拡大率 s が大きくなる。光のにじみ等の「大きさ」に使う s はここで頭打ちにする。
-  // 比較用: ?viscap=0 の時は上限なし(拡大率どおりの大きさで描く)
-  const S_VIS_MAX = /[?&]viscap=0/.test(location.search) ? Infinity : 3;
+  // 比較用: ?viscap=0 の時は上限なし(光のにじみも軌跡の点も、拡大率どおりの大きさで描く)
+  const NO_VIS_CAP = /[?&]viscap=0/.test(location.search);
+  const S_VIS_MAX = NO_VIS_CAP ? Infinity : 3;
   const AIM_GAIN = 1.8;
   const DPR = Math.min(1.2, devicePixelRatio||1);
 
@@ -624,13 +625,13 @@
       else i++;
     }
   }
-  // 軌跡の点の大きさを決める距離。カメラ位置より前(cz>=0)は従来どおりカメラ位置からの距離。
-  // カメラ位置より手前(cz<0)は中心軸からの距離にする。従来式だと視点に近づくほど点が
-  // 小さくなる逆転が起きるため。cz=0 で両者は一致するので大きさは連続
-  function trailSizeDist(P, cz){
-    const dd = dist3(P.x,P.y,P.z, cam.x,cam.y,cam.z);
-    const d = cz < 0 ? Math.sqrt(Math.max(0, dd*dd - cz*cz)) : dd;
-    return Math.max(1, d);
+  // 軌跡の点の半径: 視点からの奥行き(FOV+cz)に反比例させる。これは投影の拡大率 s に
+  // 比例するのと同じで、点の大きさと画面上の位置が同じ透視で決まる(手前ほど必ず大きい)。
+  // 旧式はカメラ位置からの距離基準で、カメラ位置付近が大きく、視点の近くで逆に小さくなっていた
+  const TRAIL_SIZE_MAX = NO_VIS_CAP ? Infinity : SIZE_MAX;
+  function trailRadius(pr, sizeMul){
+    const r = (SIZE_K * pr.s / FOV) * sizeMul;
+    return Math.max(SIZE_MIN, Math.min(TRAIL_SIZE_MAX, r));
   }
   function drawTrailAdditivePoints(arr, tsec, colorFn, sizeMul=1){
     if(arr.length===0) return;
@@ -639,9 +640,7 @@
     for(const P of arr){
       const pr = project(P.x,P.y,P.z);
       if(pr.s<=0) continue;
-      const d = trailSizeDist(P, pr.z);
-      let r = (SIZE_K / d) * sizeMul;
-      r = Math.max(SIZE_MIN, Math.min(SIZE_MAX, r));
+      const r = trailRadius(pr, sizeMul);
       const a = Math.max(ALPHA_MIN, ALPHA_MAX*Math.pow(0.5,(tsec-P.t)/FADE_HALFLIFE_S));
       ctx.fillStyle = colorFn(a*0.9);
       ctx.beginPath(); ctx.arc(pr.x, pr.y, r, 0, Math.PI*2); ctx.fill();
@@ -666,10 +665,7 @@
         if(pc.s<=0) continue;
         if(pa.s<=0){ A2=C; pa=pc; } else { B2=C; pb=pc; }
       }
-      const da=trailSizeDist(A2, pa.z);
-      const db=trailSizeDist(B2, pb.z);
-      const rA = Math.max(SIZE_MIN, Math.min(SIZE_MAX, (SIZE_K/da)*sizeMul));
-      const rB = Math.max(SIZE_MIN, Math.min(SIZE_MAX, (SIZE_K/db)*sizeMul));
+      const rA = trailRadius(pa, sizeMul), rB = trailRadius(pb, sizeMul);
       const w = (rA + rB) * 0.5 * 0.9 * lineScale;
       const aA = Math.max(ALPHA_MIN, ALPHA_MAX*Math.pow(0.5,(tsec-A2.t)/FADE_HALFLIFE_S));
       const aB = Math.max(ALPHA_MIN, ALPHA_MAX*Math.pow(0.5,(tsec-B2.t)/FADE_HALFLIFE_S));
