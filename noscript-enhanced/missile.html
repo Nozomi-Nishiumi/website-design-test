@@ -45,8 +45,9 @@
   // near(手前の描画限界): 視点(カメラ位置の FOV 単位後ろ)の直前まで下げる。
   // 投影は s=FOV/(FOV+cz) で cz=-FOV で発散するため、2% 手前で止める(拡大率の上限は50倍)
   const Z_NEAR = -0.98 * FOV;
-  // 視点の近くでは拡大率 s が大きくなる。光のにじみ等の「大きさ」に使う s はここで頭打ちにする
-  const S_VIS_MAX = 3;
+  // 視点の近くでは拡大率 s が大きくなる。光のにじみ等の「大きさ」に使う s はここで頭打ちにする。
+  // 比較用: ?viscap=0 の時は上限なし(拡大率どおりの大きさで描く)
+  const S_VIS_MAX = /[?&]viscap=0/.test(location.search) ? Infinity : 3;
   const AIM_GAIN = 1.8;
   const DPR = Math.min(1.2, devicePixelRatio||1);
 

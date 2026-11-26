@@ -16,7 +16,7 @@
   'use strict';
 
   // デプロイごとに更新するバージョン(キャッシュバスティング/HUD表示用)
-  var ENH_VERSION = '20261126a';
+  var ENH_VERSION = '20261126b';
 
   // ハンバーガーメニュー: 項目をタップしたら閉じる(CSSのチェックボックスを外す)。
   // 演出の有無に関係なく効かせたいので、reduced-motion の早期 return より前に置く
@@ -155,6 +155,8 @@
   var DEBUG = /[?&]debug=1/.test(location.search);
   // 開発用の速度・加速度グラフ: ?graphs=1 の時だけ missile.html に表示させる
   var GRAPHS = /[?&]graphs=1/.test(location.search);
+  // 比較用: ?viscap=0 の時はミサイル演出の光点の大きさの上限を外す(missile.html に渡す)
+  var VISCAP0 = /[?&]viscap=0/.test(location.search);
   var dbg = { relay: 0, lastDy: 0, pS1: 0, mOp: 0, fw: 0, fwX: 0, fwY: 0, lt: 0, cap: false, wd: 0, bg: false, ifr: null };
   updateCaption(); // 初期表示
   var hud = null;
@@ -206,7 +208,7 @@
     if (missileFrame) return;
     missileFrame = document.createElement('iframe');
     missileFrame.className = 'enh-missile';
-    missileFrame.src = 'missile.html?v=' + ENH_VERSION + (DEBUG ? '&debug=1' : '') + (GRAPHS ? '&graphs=1' : '');
+    missileFrame.src = 'missile.html?v=' + ENH_VERSION + (DEBUG ? '&debug=1' : '') + (GRAPHS ? '&graphs=1' : '') + (VISCAP0 ? '&viscap=0' : '');
     missileFrame.setAttribute('frameborder', '0');
     missileFrame.setAttribute('title', 'ミサイル演出');
     missileFrame.style.opacity = '0';
